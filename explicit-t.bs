@@ -1,0 +1,185 @@
+<pre class='metadata'>
+Title: Explicit Template Argument Deduction to T
+Status: D
+Audience: SG1, EWG
+Editor: Gašper Ažman <gasper.azman@gmail.com>
+Shortname: Explicit T
+Abstract: P0847 introuduces a case where standard template argument deduction
+          rules are inconvenient. This paper attempts to fix that.
+Group: WG21
+Date: 2018-06-06
+Markup Shorthands: markdown yes
+Revision: 0
+ED: https://github.com/atomgalaxy/paper-explicit-T/
+</pre>
+
+Problem Statement {#problem}
+=================
+
+[P0847R1: Deducing This](https://wg21.tartanllama.xyz/deducing-this/) introduces
+a wonderful feature that allows templating on the type and cv-ref qualifiers of
+the implicit `*this` parameter by making it explicit.
+
+It looks like this:
+
+```cpp
+struct provide_autominus {
+  template <typename Self>
+  Self& operator-=(this Self& self, Self const& other) {
+    self += -other;
+    return self;
+  } 
+};
+
+template <typename U>
+struct my : provide_autominus {
+  U m_value;
+
+  template <typename Self>
+  Self operator-(this Self const&) {
+    return {-m_value};
+  }
+
+  template <typename Self>
+  Self&& operator+=(this Self&& self, Self const& other) {
+    m_value += other.value();
+    return self;  // fixed in P0527R1
+  }
+
+  // generates my<T>&, const&, && and const&& versions in regular usage
+  template <typename Self>
+  decltype(auto) value(this Self&& self) {
+    return std::forward<Self>(self).m_value;
+  }
+};
+
+struct in_meters : my<int> {};
+struct in_feet : my<int> {};
+```
+
+This works wonderfully, because `in_meters{5}` cannot be combined with
+`in_feet{4}` in any way without a separate conversion function, and yet we can
+define both as empty structs.
+
+Note that [=CRTP=] is not flexible enough to handle this case:
+`provide_autominus::operator-=` works in terms of `in_meters` in `in_meters`,
+and in terms of `in_feet` in `in_feet`, precisely because that's what current
+rules for template argument deduction do. This is very powerful, and far easier
+to teach than CRTP.
+
+However, we have one method -- `my_int::value()` -- for which this flexibility
+is not welcome. We would like `Self` to always deduce to some cv-ref-qualified
+version of `my<U>`, otherwise all we're doing is introducing code bloat with
+extra template instantiations we did not need.
+
+ We also should not have used `self.m_value`, as `self` will be a reference to
+`in_meters` or `in_feet` in actual usage, and not to `my<int>` (the code should
+have used `forward_like<Self>(m_value)`, as referenced by P0847R1). If
+`in_meters` defines its own `m_value`, it will shadow the one that should be
+referred-to by `my<U>::value()`.
+
+
+Proposed Solution {#solution}
+=================
+
+This paper proposes to solve the problem outlined above with a relatively simple
+and local exception to the template argument deduction rules as they exist
+today.
+
+```cpp
+template <typename U>
+struct my {
+  U m_value;
+  // ...
+  template <typename Self>
+  decltype(auto) value(this explicit Self&& self) {
+    return std::forward<Self>(self).m_value;
+  }
+};
+```
+
+By adding `explicit` before `Self` in the parameter list, we have requested that
+`Self` always deduce to the type of the directly enclosing class, of which we
+are defining a member.
+
+Changes to the grammar {#grammar}
+----------------------
+
+The only proposed change to the grammar is to allow explicit to modify the
+`this`-designated parameter type, if it is a template parameter.
+
+Proposed Semantics {#semantics}
+==================
+
+Note: Exact wording needs help, because the author of the paper is not very well
+versed on this front. Nevertheless, an attempt is made in this section.
+
+If, in a template member function `func` of a class (or class template) `C`,
+with a `this`-annotated first parameter (which binds to the implicit `*this`
+parameter), the type (`Self`) of the first parameter is a template type, and is
+preceeded by the keyword `explicit`, `Self` shall be deduced to a cv-ref
+qualified `C`, where the cv-ref qualifiers shall be deduced as if by current
+rules.
+
+In other words:
+```
+struct C {
+  template <typename Self>
+  int func(this Self&&);
+};
+```
+
+`Self` may deduce to `C`, `C&`, `C const`, `C const&`, `C volatile`,
+`C volatile&`, `C const volatile`, `C const volatile&`,
+following existing rules for template argument deduction, but nothing else,
+under any circumstances.
+
+
+Could Concepts Solve This? {#concepts}
+==========================
+
+No. Concepts can only answer the question of whether to admit (not SFNIAE) or
+delete an overload once it has already been enumerated as a candidate for the
+overload set, which is almost no better than `enable_if`, because it happens
+after template argument deduction has already occurred. In this case, we need
+to change the template argument deduction rules themselves, so that
+`my<int>::value(this my<int> const&)` gets into the overload set, and not
+`my<int>::value(this in_meters const&)`.
+
+
+Commentary {#commentary}
+==========
+
+This is a very constrained proposal. The authors would appreciate guidance
+and/or proposals on how it could be made more general. Code bloat because of
+templates is a general problem, and constraining the type, but not the
+CV-qualifier (perhaps with a concept? explicit(Concept) might work...) for the
+purposes of *argument deduction*, not constraints, might be a better option.
+Nevertheless, in the spirit of getting at least an idea out there, this paper is
+meant as a first attempt.
+
+
+Acknowledgements {#acknowledgements}
+================
+
+The authors would like to thank Alisdair Meredith, especially, as he had both
+the original complaint about the deduction rules, and the first workable
+suggestion of how to fix it.
+
+The authors would additionally like to thank everyone who attended the C++Now
+talk "My Little \*this deduction: Friendship is Uniform", for their helpful
+comments and commentary, whithout which this paper would not have gotten the
+idelological momentum to be born.
+
+
+Definitions {#definitions}
+===========
+
+- <dfn>CRTP</dfn> Curiously Recurring Tempalate Pattern. A way of informing a
+    base-class of the type of the child class that inherited from it. Sometimes
+    used as a poor substitute for mixins, though it does have other uses.
+
+Citations {#citations}
+=========
+- P0527R1, D. Stone: Implicitly move from rvalue references in return statements
+- P0847R1, G. Ažman, S. Brand, B. Deane, B. Revzin: Deducing this
