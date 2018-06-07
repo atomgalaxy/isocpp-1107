@@ -1193,7 +1193,7 @@ Possible extra rowspan handling
   </style>
   <meta content="Bikeshed version 650c7f090a7031056e48b2cf26f91e72b5c14a32" name="generator">
   <link href="https://atomgalaxy.github.io/paper-explicit-t/explicit-t.html" rel="canonical">
-  <meta content="c5185e804b037e2ba2f30982bb7b575cd9cabdd8" name="document-revision">
+  <meta content="c492e7045fd9a3d3d63f360432e3fcb32142c347" name="document-revision">
 <style>/* style-md-lists */
 
 /* This is a weird hack for me not yet following the commonmark spec
@@ -1480,6 +1480,7 @@ rules are inconvenient. This paper attempts to fix that.</p>
     <li><a href="#acknowledgements"><span class="secno">6</span> <span class="content">Acknowledgements</span></a>
     <li><a href="#definitions"><span class="secno">7</span> <span class="content">Definitions</span></a>
     <li><a href="#citations"><span class="secno">8</span> <span class="content">Citations</span></a>
+    <li><a href="#appendix-a"><span class="secno"></span> <span class="content">Appendix a</span></a>
     <li>
      <a href="#index"><span class="secno"></span> <span class="content">Index</span></a>
      <ol class="toc">
@@ -1495,11 +1496,12 @@ cv-ref qualifiers of the implicit <code class="highlight"><span class="o">*</spa
    <p>It looks like this:</p>
 <pre class="language-cpp highlight"><span class="k">struct</span> <span class="n">provide_autominus</span> <span class="p">{</span>
   <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Self</span><span class="o">></span>
-  <span class="n">Self</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">-=</span><span class="p">(</span><span class="k">this</span> <span class="n">Self</span><span class="o">&amp;</span> <span class="n">self</span><span class="p">,</span> <span class="n">Self</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">other</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">Self</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">-=</span><span class="p">(</span><span class="k">this</span> <span class="n">Self</span><span class="o">&amp;</span> <span class="n">self</span><span class="p">,</span> <span class="n">type</span><span class="o">&lt;</span><span class="n">Self</span><span class="o">></span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">other</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">self</span> <span class="o">+=</span> <span class="o">-</span><span class="n">other</span><span class="p">;</span>
     <span class="k">return</span> <span class="n">self</span><span class="p">;</span>
-  <span class="p">}</span> 
-<span class="p">};</span>
+  <span class="p">}</span>
+  <span class="c1">// type&lt;T> just disables argument deduction, see Appendix a.</span>
+<span class="c1"></span><span class="p">};</span>
 
 <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">U</span><span class="o">></span>
 <span class="k">struct</span> <span class="nl">my</span> <span class="p">:</span> <span class="n">provide_autominus</span> <span class="p">{</span>
@@ -1511,7 +1513,7 @@ cv-ref qualifiers of the implicit <code class="highlight"><span class="o">*</spa
   <span class="p">}</span>
 
   <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Self</span><span class="o">></span>
-  <span class="n">Self</span><span class="o">&amp;&amp;</span> <span class="k">operator</span><span class="o">+=</span><span class="p">(</span><span class="k">this</span> <span class="n">Self</span><span class="o">&amp;&amp;</span> <span class="n">self</span><span class="p">,</span> <span class="n">Self</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">other</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">Self</span><span class="o">&amp;&amp;</span> <span class="k">operator</span><span class="o">+=</span><span class="p">(</span><span class="k">this</span> <span class="n">Self</span><span class="o">&amp;&amp;</span> <span class="n">self</span><span class="p">,</span> <span class="n">type</span><span class="o">&lt;</span><span class="n">Self</span><span class="o">></span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">other</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">m_value</span> <span class="o">+=</span> <span class="n">other</span><span class="p">.</span><span class="n">value</span><span class="p">();</span>
     <span class="k">return</span> <span class="n">self</span><span class="p">;</span>  <span class="c1">// fixed in P0527R1</span>
 <span class="c1"></span>  <span class="p">}</span>
@@ -1610,6 +1612,16 @@ used as a poor substitute for mixins, though it does have other uses.</p>
     <li data-md="">
      <p>P0847R1, G. Ažman, S. Brand, B. Deane, B. Revzin: Deducing this</p>
    </ul>
+   <h2 class="heading settled" id="appendix-a"><span class="content">Appendix a</span><a class="self-link" href="#appendix-a"></a></h2>
+   <p>The definition of <code class="highlight"><span class="n">type</span></code>:</p>
+<pre class="language-cpp highlight"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">></span>
+<span class="k">struct</span> <span class="n">type_s</span> <span class="p">{</span>
+  <span class="k">using</span> <span class="n">type</span> <span class="o">=</span> <span class="n">T</span><span class="p">;</span>
+<span class="p">};</span>
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">></span>
+<span class="k">using</span> <span class="n">type</span> <span class="o">=</span> <span class="n">type_s</span><span class="o">&lt;</span><span class="n">T</span><span class="o">>::</span><span class="n">type</span><span class="p">;</span>
+</pre>
+   <p>We’d call it <code class="highlight"><span class="n">identity</span></code>, but it’s taken.</p>
   </main>
 <script>
 (function() {

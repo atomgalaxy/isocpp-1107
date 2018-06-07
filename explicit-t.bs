@@ -26,10 +26,11 @@ It looks like this:
 ```cpp
 struct provide_autominus {
   template <typename Self>
-  Self& operator-=(this Self& self, Self const& other) {
+  Self& operator-=(this Self& self, type<Self> const& other) {
     self += -other;
     return self;
-  } 
+  }
+  // type<T> just disables argument deduction, see Appendix a.
 };
 
 template <typename U>
@@ -42,7 +43,7 @@ struct my : provide_autominus {
   }
 
   template <typename Self>
-  Self&& operator+=(this Self&& self, Self const& other) {
+  Self&& operator+=(this Self&& self, type<Self> const& other) {
     m_value += other.value();
     return self;  // fixed in P0527R1
   }
@@ -184,3 +185,18 @@ Citations {#citations}
 =========
 - P0527R1, D. Stone: Implicitly move from rvalue references in return statements
 - P0847R1, G. Ažman, S. Brand, B. Deane, B. Revzin: Deducing this
+
+Appendix a {#appendix-a}
+==========
+
+The definition of `type`:
+```cpp
+template <typename T>
+struct type_s {
+  using type = T;
+};
+template <typename T>
+using type = type_s<T>::type;
+```
+
+We'd call it `identity`, but it's taken.
