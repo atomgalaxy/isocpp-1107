@@ -1193,7 +1193,7 @@ Possible extra rowspan handling
   </style>
   <meta content="Bikeshed version 650c7f090a7031056e48b2cf26f91e72b5c14a32" name="generator">
   <link href="https://atomgalaxy.github.io/paper-explicit-t/explicit-t.html" rel="canonical">
-  <meta content="2b394c46fa65069cee1c988dca2d6620f12fc658" name="document-revision">
+  <meta content="c5185e804b037e2ba2f30982bb7b575cd9cabdd8" name="document-revision">
 <style>/* style-md-lists */
 
 /* This is a weird hack for me not yet following the commonmark spec
@@ -1445,9 +1445,11 @@ pre.highlight, pre > code.highlight { display: block; padding: 1em; margin: .5em
     <dl>
      <dt>This version:
      <dd><a class="u-url" href="https://atomgalaxy.github.io/paper-explicit-t/explicit-t.html">https://atomgalaxy.github.io/paper-explicit-t/explicit-t.html</a>
-     <dt>Author:
+     <dt>Authors:
      <dd>
       <dd class="editor p-author h-card vcard"><span class="p-name fn">Gašper Ažman &lt;gasper.azman@gmail.com></span>
+     <dd>
+      <dd class="editor p-author h-card vcard"><span class="p-name fn">Simon Brand &lt;simon@codeplay.com></span>
      <dt>Audience:
      <dd>SG1, EWG
      <dt>Project:
@@ -1459,7 +1461,7 @@ pre.highlight, pre > code.highlight { display: block; padding: 1em; margin: .5em
   </div>
   <div class="p-summary" data-fill-with="abstract">
    <h2 class="no-num no-toc no-ref heading settled" id="abstract"><span class="content">Abstract</span></h2>
-   <p>P0847 introuduces a case where standard template argument deduction
+   <p>P0847 introduces a case where standard template argument deduction
 
 rules are inconvenient. This paper attempts to fix that.</p>
   </div>
@@ -1488,8 +1490,8 @@ rules are inconvenient. This paper attempts to fix that.</p>
   <main>
    <h2 class="heading settled" data-level="1" id="problem"><span class="secno">1. </span><span class="content">Problem Statement</span><a class="self-link" href="#problem"></a></h2>
    <p><a href="https://wg21.tartanllama.xyz/deducing-this/">P0847R1: Deducing This</a> introduces
-a wonderful feature that allows templating on the type and cv-ref qualifiers of
-the implicit <code class="highlight"><span class="o">*</span><span class="k">this</span></code> parameter by making it explicit.</p>
+a wonderful feature that allows deducing a template parameter on the type and
+cv-ref qualifiers of the implicit <code class="highlight"><span class="o">*</span><span class="k">this</span></code> parameter by making it explicit.</p>
    <p>It looks like this:</p>
 <pre class="language-cpp highlight"><span class="k">struct</span> <span class="n">provide_autominus</span> <span class="p">{</span>
   <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Self</span><span class="o">></span>
