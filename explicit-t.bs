@@ -4,7 +4,7 @@ Status: D
 Audience: SG1, EWG
 Editor: Gašper Ažman <gasper.azman@gmail.com>
 Editor: Simon Brand <simon@codeplay.com>
-Shortname: XXXX
+Shortname: P1107
 Abstract: P0847 introduces a case where standard template argument deduction
           rules are inconvenient. This paper attempts to fix that.
 Group: WG21
