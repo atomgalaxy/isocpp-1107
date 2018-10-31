@@ -1,209 +1,200 @@
 <pre class='metadata'>
-Title: Type-constrained Deduction
+Title: Constrained Deduction
 Status: D
-Audience: EWG, SG1
+Audience: EWG
 Editor: Gašper Ažman <gasper.azman@gmail.com>
 Editor: Simon Brand <simon@codeplay.com>
 Editor: Andrew Bennieston <a.j.bennieston@gmail.com>
 Shortname: P1107
-Abstract: P0847 introduces a case where standard template argument deduction
-          rules are inconvenient. This paper attempts to fix that.
+Abstract: The inability to constrain function template argument deduction causes un-necessary template instantiations, as well as frequent use of SFINAE to disable specific undesirable overloads. This paper proposes a way to intercept the deduction of template arguments and compute them.
 Group: WG21
 Date: 2018-10-12
 Markup Shorthands: markdown yes
 Revision: 0
-ED: https://atomgalaxy.github.io/paper-explicit-t/explicit-t.html
+ED: https://atomgalaxy.github.io/paper-explicit-t/constrained-deduction.html
 </pre>
 
 Problem Statement {#problem}
 ============================
 
-Template argument deduction is a basic feature of C++ templates. There are several quite distinct reasons to use it: to instantiate a generic algorithm for a type, handle various combinations of cv-ref qualifiers, or disable a function instantiation using SFINAE or the new `requires` machinery.
+Template argument deduction is a basic feature of C++ templates. There are several quite distinct uses of it:
+- to instantiate a generic algorithm for a given type (`template <typename T> auto min(T, T)`)
+- handle various combinations of cv-ref qualifiers (`template <typename T> auto foo(T&&)`)
+- disable a function instantiation using SFINAE or the new `requires` machinery (`template <typename T> auto foo(T) requires predicate<T>`)
+- combinations of above
 
-In addition, library authors have long complained that their inability to constrain deduction leads to code bloat, because every derived class type will get its own instantiation of a function, even if it only deals with the base-class type. This leads to slower compile times, and produces more machine code than necessary, if we don't even count the additional size of exception tables and the duplicate work the optimizer has to do to optimize every copy.
-
-[P0847R1: Deducing This](https://wg21.tartanllama.xyz/deducing-this/) takes this story further by introducing a wonderful feature (at least as far as the authors are concerned, where there is some overlap) that allows member function templates to deduce the *object parameter* type, thus compounding the problem of code bloat when faced with derived types.
-
---- EDIT LINE
-It looks like this:
+For an illustration, humor a contrived example. Consider a `get` for a simple value container, which is intended to be inherited from:
 
 ```cpp
-struct provide_autominus {
-  template <typename Self>
-  Self& operator-=(this Self& self, type<Self> const& other) {
-    self += -other;
-    return self;
-  }
-  // type<T> just disables argument deduction, see Appendix a.
+struct box {
+  std::vector<int> value;
 };
 
-template <typename U>
-struct my : provide_autominus {
-  U m_value;
 
-  template <typename Self>
-  Self operator-(this Self const&) {
-    return {-m_value};
-  }
-
-  template <typename Self>
-  Self&& operator+=(this Self&& self, type<Self> const& other) {
-    m_value += other.value();
-    return self;  // fixed in P0527R1
-  }
-
-  // generates my<T>&, const&, && and const&& versions in regular usage
-  template <typename Self>
-  decltype(auto) value(this Self&& self) {
-    return std::forward<Self>(self).m_value;
-  }
-};
-
-struct in_meters : my<int> {};
-struct in_feet : my<int> {};
+template <typename Box>
+decltype(auto) get(Box&& x)
+    requires DerivedFrom<B, box> {
+  // borrow forward_like from [[D0847]] - like std::forward, but forwards
+  // its parameter based on the value-category of the template parameter.
+  return std::forward_like<Box>(x.box::value); /* access the *box* value */
+}
 ```
 
-This works wonderfully, because `in_meters{5}` cannot be combined with
-`in_feet{4}` in any way without a separate conversion function, and yet we can
-define both as empty structs.
+The intention is to forward the value-category of the box to the accessed value. There are only 8 possible useful instantiations of the `get` function: `box&`, `box&&`, `box const&`, `box const&&`, and their `volatile` versions. Since `box` is intended to be inherited from, `get` will get instantiatiations for every derived, however, leading to code bloat.
 
-Note that [=CRTP=] is not flexible enough to handle this case:
-`provide_autominus::operator-=` works in terms of `in_meters` in `in_meters`,
-and in terms of `in_feet` in `in_feet`, precisely because that's what current
-rules for template argument deduction do. This is very powerful, and far easier
-to teach than CRTP.
+While the example is contrived for clarity, should `get` be a more complex function, such code bloat does become serious, and the above has been a concern for library implementers since templates were added to the language. Every time templates become more useful, the problem gets worse; first, when forwarding references were added to the language, because they added an orthogonal reason to overload, and it will get even worse when [[D0847R1]] or any spiritual successor lands, because it will provide a very powerful vector for addition of functions which exhibit exactly this problem (while solving DRY for member functions).
 
-However, we have one method -- `my_int::value()` -- for which this flexibility
-is not welcome. We would like `Self` to always deduce to some cv-ref-qualified
-version of `my<U>`, otherwise all we're doing is introducing code bloat with
-extra template instantiations we did not need.
+The main issues with template code bloat are more machine code than necessary, additional exception tables and duplicate work the optimizer has to do to optimize every copy, leading to slower compile times.
 
- We also should not have used `self.m_value`, as `self` will be a reference to
-`in_meters` or `in_feet` in actual usage, and not to `my<int>` (the code should
-have used `forward_like<Self>(m_value)`, as referenced by P0847R1). If
-`in_meters` defines its own `m_value`, it will shadow the one that should be
-referred-to by `my<U>::value()`.
+There is a separate issue from code bloat, however. When writing templates that are really supposed to operate on a particular base-class type, one has to qualify every member access with the type's name, because derived classes can shadow those methods. This will become far more prevalent should [[D0847R1]] land. Deduction expressions are a flexible way to solve a variety of issues such an extension would introduce, in addition to being an extremely powerful way to constrain template instantiation in deduced contexts.
 
 
 Proposed Solution {#solution}
-=================
+=============================
 
-This paper proposes to solve the problem outlined above with a relatively simple
-and local exception to the template argument deduction rules as they exist
-today.
+We are proposing a mechanism to allow a metafunction to compute the final deduction from the first-pass deduction that occurs in C++17.
+
+
+Example {#basic-example}
+------------------------
 
 ```cpp
-template <typename U>
-struct my {
-  U m_value;
-  // ...
-  template <typename Self>
-  decltype(auto) value(this explicit Self&& self) {
-    return std::forward<Self>(self).m_value;
-  }
-};
+template <typename Box : like_t<Box, box>>
+decltype(auto) get(Box&& x) {
+  return std::forward_like<Box>(x.value);
+}
 ```
 
-By adding `explicit` before `Self` in the parameter list, we have requested that
-`Self` always deduce to the type of the directly enclosing class, of which we
-are defining a member.
+- `like_t` copies (and overwrites) any cv-ref qualifiers on its second parameter with the ones on its first
+- There is no need to use `x.box::value` anymore, as `like_t<Box, box>` always results in a cv-qualified `box`
+- the `requires` clause is no longer necessary, since a reference to a `box` will always only bind to references to `box`es and their derived classes.
 
-Changes to the grammar {#grammar}
-----------------------
 
-The only proposed change to the grammar is to allow explicit to modify the
-`this`-designated parameter type, if it is a template parameter.
+Syntax {#syntax}
+================
+
+
 
 Proposed Semantics {#semantics}
-==================
+===============================
 
-Note: Exact wording needs help, because the author of the paper is not very well
-versed on this front. Nevertheless, an attempt is made in this section.
+This section describes the feature using a few "as if rewritten as" sections, each describing a part of the proposed mechanism.
 
-If, in a template member function `func` of a class (or class template) `C`,
-with a `this`-annotated first parameter (which binds to the implicit `*this`
-parameter), the type (`Self`) of the first parameter is a template type, and is
-preceeded by the keyword `explicit`, `Self` shall be deduced to a cv-ref
-qualified `C`, where the cv-ref qualifiers shall be deduced as if by current
-rules.
 
-In other words:
-```
-struct C {
-  template <typename Self>
-  int func(this Self&&);
-};
+Deduction {#deduction-semantics}
+--------------------------------
+
+### For a type template parameter ### {#deduction-types}
+
+```cpp
+// template <
+CONCEPT T = DEFAULT_EXPR : DEDUCTION_EXPR
+// > void 
 ```
 
-`Self` may deduce to `C`, `C&`, `C const`, `C const&`, `C volatile`,
-`C volatile&`, `C const volatile`, `C const volatile&`,
-following existing rules for template argument deduction, but nothing else,
-under any circumstances.
+1. The deduction of `T` proceeds normally until `T` is deduced as per C++17 rules, with any default initializer expressions executing if necessary. Let us name this result the *initial deduction*.
+2. Immediately after the initial deduction is known, but before executing any `requires` constraints, execute `DEDUCTION_EXPR` in the with the same set name bindings available as the `DEFAULT_EXPR` would have (or has) been run with, with the addition of `T` being bound to the *initial deduction*. Let the value of `DEDUCTION_EXPR` be the *final deduction*. If `DEDUCTION_EXPR` does not evaluate to a type, this results in a substitution failure (SFINAE).
+3. Any `requires` expressions that would be run in C++17 are run now, with the name `T` being bound to the *final deduction*.
+
+Deduction of following parameters is done with the name `T` being bound to the constrained deduction.
+
+### For a value template parameter ### {#deduction-values}
+
+The algorithm is exactly the same, but the the expression after the colon has to result in a a value. Basically, `DEDUCTION_EXPR` has to result in something that can be bound to the way the template parameter is declared.
+
+### For a template-template parameter ### {#deduction-template-templates}
+
+See values. Same rules - if it binds, it works, if it doesn't, SFINAE.
 
 
-Could Concepts Solve This? {#concepts}
-==========================
+Function signature construction {#sema-sig}
+-------------------------------------------
 
-No. Concepts can only answer the question of whether to admit (not SFNIAE) or
-delete an overload once it has already been enumerated as a candidate for the
-overload set, which is almost no better than `enable_if`, because it happens
-after template argument deduction has already occurred. In this case, we need
-to change the template argument deduction rules themselves, so that
-`my<int>::value(this my<int> const&)` gets into the overload set, and not
-`my<int>::value(this in_meters const&)`.
+Same as now - the deduced parameters are substituted back into the function signature (and the body of the template), with *deduced parameters* now meaning *final deduced parameters*. This may result in an invalid signature, which is a SFINAE condition.
 
 
-Commentary {#commentary}
+Overload set construction {#overload-semantics}
+-----------------------------------------------
+
+The construction of the overload set is unchanged, once one takes into account that candidates are generated differently than before. Compared to C++17, the overload set consists of functions instantiated from the very same candidate templates as before, though their signatures may be different. If two templates generate the same function signature, the result is ambiguous, and therefore results in an invalid program (diagnostic required).
+
+
+Examples {#examples}
+====================
+
+
+FAQ {#faq}
 ==========
 
-This is a very constrained proposal. The authors would appreciate guidance
-and/or proposals on how it could be made more general. Code bloat because of
-templates is a general problem, and constraining the type, but not the
-CV-qualifier (perhaps with a concept? explicit(Concept) might work...) for the
-purposes of *argument deduction*, not constraints, might be a better option.
-Nevertheless, in the spirit of getting at least an idea out there, this paper is
-meant as a first attempt.
+
+Can I use a previously deduced parameter in a `DEDUCTION_EXPR`? {#faq-use-deduced}
+----------------------------------------------------------------------------------
+
+Yes! This should work:
+
+```cpp
+template <
+  typename T : like_t<T, box>
+  typename U : decltype(declval<T>().value)
+> foo(T&&, U) {}
+```
+
+`T` always deduces to some cv-qualified version of `box` or `box&`, and `U` is coerced to the declval of the box's value. Note that `T` is the already fully deduced `box` in `U`'s `deduction-expr`.
+
+
+Can I use the *initial deduction* in other template parameters? {#faq-initial-elsewhere}
+----------------------------------------------------------------------------------------
+
+In other words, given
+
+```cpp
+template <
+  typename T : long /* T will *always* be long */, 
+  typename U = T
+>
+void foo(T) {}
+```
+
+is it possible to have `U` deduce to `int` instead of `long` in the call `foo(1)`?
+
+The answer is *no*. There is no way to access the *initial deduction* outside of the `deduction-expr` (though I'm sure clever metaprogrammers can find a way to export it somehow).
+
+
+
+What if the final signature doesn't bind to the given parameters? {#faq-no-bind}
+--------------------------------------------------------------------------------
+
+The scenario is the following:
+
+```cpp
+template <typename T : int>
+void foo(T) {}
+
+foo(nullptr);
+```
+
+The initial deduction for `T` is `nullptr_t`, but the `deduction-expr` for `T` forces it to be `int`. The resulting signature is `foo(int)`, which does not match, and is removed from the overload set. In the absence of additional overloads for `foo` this fails with a compilation error because there were no matching functions to call.
+
+
+What happens if two templates generate the same overload {#faq-same-overload}
+-----------------------------------------------------------------------------
+
+Same as now - if the best match is ambigous, the program ill-formed (diagnostic required). Two templates resulting in the same best-match overload is a special case of this eventuality.
+
+
+Could Concepts Solve This? {#faq-but-concepts}
+----------------------------------------------
+
+No. Concepts can only answer the question of whether to admit or remove an overload once it has already been enumerated as a candidate for the overload set, which is almost no better than `enable_if`, because it happens _after_ template argument deduction has already occurred. In this case, we need to change the template argument deduction rules themselves, so that the template parameter itself is deduced in a programmable fashion, and _then_ perhaps constrained by a concept.
 
 
 Acknowledgements {#acknowledgements}
-================
+====================================
 
-The authors would like to thank Alisdair Meredith, especially, as he had both
-the original complaint about the deduction rules, and the first workable
-suggestion of how to fix it.
+The authors would like to thank Alisdair Meredith, especially, as he had both the original complaint about the deduction rules, and the first workable suggestion of how to fix it. This solution is far more general, but every proposal needs a spark.
 
-The authors would additionally like to thank everyone who attended the C++Now
-talk "My Little \*this deduction: Friendship is Uniform", for their helpful
-comments and commentary, whithout which this paper would not have gotten the
-idelological momentum to be born.
+The authors would additionally like to thank everyone (as I don't think there was anyone who remained silent) who attended the C++Now 2018 talk "My Little \*this deduction: Friendship is Uniform", for their helpful comments, commentary, hints, tips, and ideas, whithout which this paper would not have gotten the idelological momentum to be born.
 
-
-Definitions {#definitions}
-===========
-
-- <dfn>CRTP</dfn> Curiously Recurring Tempalate Pattern. A way of informing a
-    base-class of the type of the child class that inherited from it. Sometimes
-    used as a poor substitute for mixins, though it does have other uses.
-
-Citations {#citations}
-=========
-- P0527R1, D. Stone: Implicitly move from rvalue references in return statements
-- P0847R1, G. Ažman, S. Brand, B. Deane, B. Revzin: Deducing this
-
-Appendix a {#appendix-a}
-==========
-
-The definition of `type`:
-```cpp
-template <typename T>
-struct type_s {
-  using type = T;
-};
-template <typename T>
-using type = type_s<T>::type;
-```
-
-We'd call it `identity`, but it's taken.
 
 <!--
   vim: textwidth=0 ft=markdown

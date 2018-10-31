@@ -2,7 +2,7 @@
  <head>
   <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
   <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport">
-  <title>P1107R0: Type-constrained Deduction</title>
+  <title>P1107R0: Constrained Deduction</title>
 <style data-fill-with="stylesheet">/******************************************************************************
  *                   Style sheet for the W3C specifications                   *
  *
@@ -1227,10 +1227,10 @@ Possible extra rowspan handling
       text-align: center;
     }
   </style>
-  <meta content="Bikeshed version dff342f4b23fb230b71436fb31b55f5f169715bd" name="generator">
-  <link href="https://atomgalaxy.github.io/paper-explicit-t/explicit-t.html" rel="canonical">
+  <meta content="Bikeshed version 04b354547d55896d854a81cffb3965bd6f8758ec" name="generator">
+  <link href="https://atomgalaxy.github.io/paper-explicit-t/constrained-deduction.html" rel="canonical">
   <link href="https://isocpp.org/favicon.ico" rel="icon">
-  <meta content="a4aaec5daaf55051a8d31e7c2a5c8ba26cf0d669" name="document-revision">
+  <meta content="d6973380aefb03e9553ff46dea6a428ea23eb020" name="document-revision">
 <style>/* style-md-lists */
 
 /* This is a weird hack for me not yet following the commonmark spec
@@ -1241,6 +1241,93 @@ Possible extra rowspan handling
 [data-md] > :last-child {
     margin-bottom: 0;
 }</style>
+<style>/* style-counters */
+
+body {
+    counter-reset: example figure issue;
+}
+.issue {
+    counter-increment: issue;
+}
+.issue:not(.no-marker)::before {
+    content: "Issue " counter(issue);
+}
+
+.example {
+    counter-increment: example;
+}
+.example:not(.no-marker)::before {
+    content: "Example " counter(example);
+}
+.invalid.example:not(.no-marker)::before,
+.illegal.example:not(.no-marker)::before {
+    content: "Invalid Example" counter(example);
+}
+
+figcaption {
+    counter-increment: figure;
+}
+figcaption:not(.no-marker)::before {
+    content: "Figure " counter(figure) " ";
+}</style>
+<style>/* style-syntax-highlighting */
+
+.highlight:not(.idl) { background: hsl(24, 20%, 95%); }
+code.highlight { padding: .1em; border-radius: .3em; }
+pre.highlight, pre > code.highlight { display: block; padding: 1em; margin: .5em 0; overflow: auto; border-radius: 0; }
+c-[a] { color: #990055 } /* Keyword.Declaration */
+c-[b] { color: #990055 } /* Keyword.Type */
+c-[c] { color: #708090 } /* Comment */
+c-[d] { color: #708090 } /* Comment.Multiline */
+c-[e] { color: #0077aa } /* Name.Attribute */
+c-[f] { color: #669900 } /* Name.Tag */
+c-[g] { color: #222222 } /* Name.Variable */
+c-[k] { color: #990055 } /* Keyword */
+c-[l] { color: #000000 } /* Literal */
+c-[m] { color: #000000 } /* Literal.Number */
+c-[n] { color: #0077aa } /* Name */
+c-[o] { color: #999999 } /* Operator */
+c-[p] { color: #999999 } /* Punctuation */
+c-[s] { color: #a67f59 } /* Literal.String */
+c-[t] { color: #a67f59 } /* Literal.String.Single */
+c-[u] { color: #a67f59 } /* Literal.String.Double */
+c-[cp] { color: #708090 } /* Comment.Preproc */
+c-[c1] { color: #708090 } /* Comment.Single */
+c-[cs] { color: #708090 } /* Comment.Special */
+c-[kc] { color: #990055 } /* Keyword.Constant */
+c-[kn] { color: #990055 } /* Keyword.Namespace */
+c-[kp] { color: #990055 } /* Keyword.Pseudo */
+c-[kr] { color: #990055 } /* Keyword.Reserved */
+c-[ld] { color: #000000 } /* Literal.Date */
+c-[nc] { color: #0077aa } /* Name.Class */
+c-[no] { color: #0077aa } /* Name.Constant */
+c-[nd] { color: #0077aa } /* Name.Decorator */
+c-[ni] { color: #0077aa } /* Name.Entity */
+c-[ne] { color: #0077aa } /* Name.Exception */
+c-[nf] { color: #0077aa } /* Name.Function */
+c-[nl] { color: #0077aa } /* Name.Label */
+c-[nn] { color: #0077aa } /* Name.Namespace */
+c-[py] { color: #0077aa } /* Name.Property */
+c-[ow] { color: #999999 } /* Operator.Word */
+c-[mb] { color: #000000 } /* Literal.Number.Bin */
+c-[mf] { color: #000000 } /* Literal.Number.Float */
+c-[mh] { color: #000000 } /* Literal.Number.Hex */
+c-[mi] { color: #000000 } /* Literal.Number.Integer */
+c-[mo] { color: #000000 } /* Literal.Number.Oct */
+c-[sb] { color: #a67f59 } /* Literal.String.Backtick */
+c-[sc] { color: #a67f59 } /* Literal.String.Char */
+c-[sd] { color: #a67f59 } /* Literal.String.Doc */
+c-[se] { color: #a67f59 } /* Literal.String.Escape */
+c-[sh] { color: #a67f59 } /* Literal.String.Heredoc */
+c-[si] { color: #a67f59 } /* Literal.String.Interpol */
+c-[sx] { color: #a67f59 } /* Literal.String.Other */
+c-[sr] { color: #a67f59 } /* Literal.String.Regex */
+c-[ss] { color: #a67f59 } /* Literal.String.Symbol */
+c-[vc] { color: #0077aa } /* Name.Variable.Class */
+c-[vg] { color: #0077aa } /* Name.Variable.Global */
+c-[vi] { color: #0077aa } /* Name.Variable.Instance */
+c-[il] { color: #000000 } /* Literal.Number.Integer.Long */
+</style>
 <style>/* style-selflinks */
 
 .heading, .issue, .note, .example, li, dt {
@@ -1287,35 +1374,6 @@ dfn > a.self-link:hover {
 a.self-link::before            { content: "¶"; }
 .heading > a.self-link::before { content: "§"; }
 dfn > a.self-link::before      { content: "#"; }</style>
-<style>/* style-counters */
-
-body {
-    counter-reset: example figure issue;
-}
-.issue {
-    counter-increment: issue;
-}
-.issue:not(.no-marker)::before {
-    content: "Issue " counter(issue);
-}
-
-.example {
-    counter-increment: example;
-}
-.example:not(.no-marker)::before {
-    content: "Example " counter(example);
-}
-.invalid.example:not(.no-marker)::before,
-.illegal.example:not(.no-marker)::before {
-    content: "Invalid Example" counter(example);
-}
-
-figcaption {
-    counter-increment: figure;
-}
-figcaption:not(.no-marker)::before {
-    content: "Figure " counter(figure) " ";
-}</style>
 <style>/* style-autolinks */
 
 .css.css, .property.property, .descriptor.descriptor {
@@ -1378,110 +1436,15 @@ pre .property::before, pre .property::after {
 [data-link-type=biblio] {
     white-space: pre;
 }</style>
-<style>/* style-dfn-panel */
-
-.dfn-panel {
-    position: absolute;
-    z-index: 35;
-    height: auto;
-    width: -webkit-fit-content;
-    width: fit-content;
-    max-width: 300px;
-    max-height: 500px;
-    overflow: auto;
-    padding: 0.5em 0.75em;
-    font: small Helvetica Neue, sans-serif, Droid Sans Fallback;
-    background: #DDDDDD;
-    color: black;
-    border: outset 0.2em;
-}
-.dfn-panel:not(.on) { display: none; }
-.dfn-panel * { margin: 0; padding: 0; text-indent: 0; }
-.dfn-panel > b { display: block; }
-.dfn-panel a { color: black; }
-.dfn-panel a:not(:hover) { text-decoration: none !important; border-bottom: none !important; }
-.dfn-panel > b + b { margin-top: 0.25em; }
-.dfn-panel ul { padding: 0; }
-.dfn-panel li { list-style: inside; }
-.dfn-panel.activated {
-    display: inline-block;
-    position: fixed;
-    left: .5em;
-    bottom: 2em;
-    margin: 0 auto;
-    max-width: calc(100vw - 1.5em - .4em - .5em);
-    max-height: 30vh;
-}
-
-.dfn-paneled { cursor: pointer; }
-</style>
-<style>/* style-syntax-highlighting */
-
-.highlight:not(.idl) { background: hsl(24, 20%, 95%); }
-code.highlight { padding: .1em; border-radius: .3em; }
-pre.highlight, pre > code.highlight { display: block; padding: 1em; margin: .5em 0; overflow: auto; border-radius: 0; }
-c-[a] { color: #990055 } /* Keyword.Declaration */
-c-[b] { color: #990055 } /* Keyword.Type */
-c-[c] { color: #708090 } /* Comment */
-c-[d] { color: #708090 } /* Comment.Multiline */
-c-[e] { color: #0077aa } /* Name.Attribute */
-c-[f] { color: #669900 } /* Name.Tag */
-c-[g] { color: #222222 } /* Name.Variable */
-c-[k] { color: #990055 } /* Keyword */
-c-[l] { color: #000000 } /* Literal */
-c-[m] { color: #000000 } /* Literal.Number */
-c-[n] { color: #0077aa } /* Name */
-c-[o] { color: #999999 } /* Operator */
-c-[p] { color: #999999 } /* Punctuation */
-c-[s] { color: #a67f59 } /* Literal.String */
-c-[t] { color: #a67f59 } /* Literal.String.Single */
-c-[u] { color: #a67f59 } /* Literal.String.Double */
-c-[cp] { color: #708090 } /* Comment.Preproc */
-c-[c1] { color: #708090 } /* Comment.Single */
-c-[cs] { color: #708090 } /* Comment.Special */
-c-[kc] { color: #990055 } /* Keyword.Constant */
-c-[kn] { color: #990055 } /* Keyword.Namespace */
-c-[kp] { color: #990055 } /* Keyword.Pseudo */
-c-[kr] { color: #990055 } /* Keyword.Reserved */
-c-[ld] { color: #000000 } /* Literal.Date */
-c-[nc] { color: #0077aa } /* Name.Class */
-c-[no] { color: #0077aa } /* Name.Constant */
-c-[nd] { color: #0077aa } /* Name.Decorator */
-c-[ni] { color: #0077aa } /* Name.Entity */
-c-[ne] { color: #0077aa } /* Name.Exception */
-c-[nf] { color: #0077aa } /* Name.Function */
-c-[nl] { color: #0077aa } /* Name.Label */
-c-[nn] { color: #0077aa } /* Name.Namespace */
-c-[py] { color: #0077aa } /* Name.Property */
-c-[ow] { color: #999999 } /* Operator.Word */
-c-[mb] { color: #000000 } /* Literal.Number.Bin */
-c-[mf] { color: #000000 } /* Literal.Number.Float */
-c-[mh] { color: #000000 } /* Literal.Number.Hex */
-c-[mi] { color: #000000 } /* Literal.Number.Integer */
-c-[mo] { color: #000000 } /* Literal.Number.Oct */
-c-[sb] { color: #a67f59 } /* Literal.String.Backtick */
-c-[sc] { color: #a67f59 } /* Literal.String.Char */
-c-[sd] { color: #a67f59 } /* Literal.String.Doc */
-c-[se] { color: #a67f59 } /* Literal.String.Escape */
-c-[sh] { color: #a67f59 } /* Literal.String.Heredoc */
-c-[si] { color: #a67f59 } /* Literal.String.Interpol */
-c-[sx] { color: #a67f59 } /* Literal.String.Other */
-c-[sr] { color: #a67f59 } /* Literal.String.Regex */
-c-[ss] { color: #a67f59 } /* Literal.String.Symbol */
-c-[vc] { color: #0077aa } /* Name.Variable.Class */
-c-[vg] { color: #0077aa } /* Name.Variable.Global */
-c-[vi] { color: #0077aa } /* Name.Variable.Instance */
-c-[il] { color: #000000 } /* Literal.Number.Integer.Long */
-</style>
  <body class="h-entry">
   <div class="head">
    <p data-fill-with="logo"></p>
-   <h1 class="p-name no-ref" id="title">P1107R0<br>Type-constrained Deduction</h1>
+   <h1 class="p-name no-ref" id="title">P1107R0<br>Constrained Deduction</h1>
    <h2 class="no-num no-toc no-ref heading settled" id="subtitle"><span class="content">Draft Proposal, <time class="dt-updated" datetime="2018-10-12">2018-10-12</time></span></h2>
    <div data-fill-with="spec-metadata">
     <dl>
      <dt>This version:
-     <dd><a class="u-url" href="https://atomgalaxy.github.io/paper-explicit-t/explicit-t.html">https://atomgalaxy.github.io/paper-explicit-t/explicit-t.html</a>
+     <dd><a class="u-url" href="https://atomgalaxy.github.io/paper-explicit-t/constrained-deduction.html">https://atomgalaxy.github.io/paper-explicit-t/constrained-deduction.html</a>
      <dt>Authors:
      <dd>
       <dd class="editor p-author h-card vcard"><span class="p-name fn">Gašper Ažman &lt;gasper.azman@gmail.com></span>
@@ -1490,7 +1453,7 @@ c-[il] { color: #000000 } /* Literal.Number.Integer.Long */
      <dd>
       <dd class="editor p-author h-card vcard"><span class="p-name fn">Andrew Bennieston &lt;a.j.bennieston@gmail.com></span>
      <dt>Audience:
-     <dd>EWG, SG1
+     <dd>EWG
      <dt>Project:
      <dd>ISO/IEC JTC1/SC22/WG21 14882: Programming Language — C++
     </dl>
@@ -1500,9 +1463,7 @@ c-[il] { color: #000000 } /* Literal.Number.Integer.Long */
   </div>
   <div class="p-summary" data-fill-with="abstract">
    <h2 class="no-num no-toc no-ref heading settled" id="abstract"><span class="content">Abstract</span></h2>
-   <p>P0847 introduces a case where standard template argument deduction
-
-rules are inconvenient. This paper attempts to fix that.</p>
+   <p>The inability to constrain function template argument deduction causes un-necessary template instantiations, as well as frequent use of SFINAE to disable specific undesirable overloads. This paper proposes a way to intercept the deduction of template arguments and compute them.</p>
   </div>
   <nav data-fill-with="table-of-contents" id="toc">
    <h2 class="no-num no-toc no-ref" id="contents">Table of Contents</h2>
@@ -1511,157 +1472,148 @@ rules are inconvenient. This paper attempts to fix that.</p>
     <li>
      <a href="#solution"><span class="secno">2</span> <span class="content">Proposed Solution</span></a>
      <ol class="toc">
-      <li><a href="#grammar"><span class="secno">2.1</span> <span class="content">Changes to the grammar</span></a>
+      <li><a href="#basic-example"><span class="secno">2.1</span> <span class="content">Example</span></a>
      </ol>
-    <li><a href="#semantics"><span class="secno">3</span> <span class="content">Proposed Semantics</span></a>
-    <li><a href="#concepts"><span class="secno">4</span> <span class="content">Could Concepts Solve This?</span></a>
-    <li><a href="#commentary"><span class="secno">5</span> <span class="content">Commentary</span></a>
-    <li><a href="#acknowledgements"><span class="secno">6</span> <span class="content">Acknowledgements</span></a>
-    <li><a href="#definitions"><span class="secno">7</span> <span class="content">Definitions</span></a>
-    <li><a href="#citations"><span class="secno">8</span> <span class="content">Citations</span></a>
-    <li><a href="#appendix-a"><span class="secno"></span> <span class="content">Appendix a</span></a>
+    <li><a href="#syntax"><span class="secno">3</span> <span class="content">Syntax</span></a>
     <li>
-     <a href="#index"><span class="secno"></span> <span class="content">Index</span></a>
+     <a href="#semantics"><span class="secno">4</span> <span class="content">Proposed Semantics</span></a>
      <ol class="toc">
-      <li><a href="#index-defined-here"><span class="secno"></span> <span class="content">Terms defined by this specification</span></a>
+      <li>
+       <a href="#deduction-semantics"><span class="secno">4.1</span> <span class="content">Deduction</span></a>
+       <ol class="toc">
+        <li><a href="#deduction-types"><span class="secno">4.1.1</span> <span class="content">For a type template parameter</span></a>
+        <li><a href="#deduction-values"><span class="secno">4.1.2</span> <span class="content">For a value template parameter</span></a>
+        <li><a href="#deduction-template-templates"><span class="secno">4.1.3</span> <span class="content">For a template-template parameter</span></a>
+       </ol>
+      <li><a href="#sema-sig"><span class="secno">4.2</span> <span class="content">Function signature construction</span></a>
+      <li><a href="#overload-semantics"><span class="secno">4.3</span> <span class="content">Overload set construction</span></a>
+     </ol>
+    <li><a href="#examples"><span class="secno">5</span> <span class="content">Examples</span></a>
+    <li>
+     <a href="#faq"><span class="secno">6</span> <span class="content">FAQ</span></a>
+     <ol class="toc">
+      <li><a href="#faq-use-deduced"><span class="secno">6.1</span> <span class="content">Can I use a previously deduced parameter in a <code class="highlight"><c- n>DEDUCTION_EXPR</c-></code>?</span></a>
+      <li><a href="#faq-initial-elsewhere"><span class="secno">6.2</span> <span class="content">Can I use the <em>initial deduction</em> in other template parameters?</span></a>
+      <li><a href="#faq-no-bind"><span class="secno">6.3</span> <span class="content">What if the final signature doesn’t bind to the given parameters?</span></a>
+      <li><a href="#faq-same-overload"><span class="secno">6.4</span> <span class="content">What happens if two templates generate the same overload</span></a>
+      <li><a href="#faq-but-concepts"><span class="secno">6.5</span> <span class="content">Could Concepts Solve This?</span></a>
+     </ol>
+    <li><a href="#acknowledgements"><span class="secno">7</span> <span class="content">Acknowledgements</span></a>
+    <li>
+     <a href="#references"><span class="secno"></span> <span class="content">References</span></a>
+     <ol class="toc">
+      <li><a href="#informative"><span class="secno"></span> <span class="content">Informative References</span></a>
      </ol>
    </ol>
   </nav>
   <main>
    <h2 class="heading settled" data-level="1" id="problem"><span class="secno">1. </span><span class="content">Problem Statement</span><a class="self-link" href="#problem"></a></h2>
-   <p>Template argument deduction is a basic feature of C++ templates. There are several quite distinct reasons to use it: to instantiate a generic algorithm for a type, handle various combinations of cv-ref qualifiers, or disable a function instantiation using SFINAE or the new <code class="highlight"><c- n>requires</c-></code> machinery.</p>
-   <p>In addition, library authors have long complained that their inability to constrain deduction leads to code bloat, because every derived class type will get its own instantiation of a function, even if it only deals with the base-class type. This leads to slower compile times, and produces more machine code than necessary, if we don’t even count the additional size of exception tables and the duplicate work the optimizer has to do to optimize every copy.</p>
-   <p><a href="https://wg21.tartanllama.xyz/deducing-this/">P0847R1: Deducing This</a> takes this story further by introducing a wonderful feature (at least as far as the authors are concerned, where there is some overlap) that allows member function templates to deduce the <em>object parameter</em> type, thus compounding the problem of code bloat when faced with derived types.</p>
-   <p>--- EDIT LINE
-It looks like this:</p>
-<pre class="language-cpp highlight"><c- k>struct</c-> <c- n>provide_autominus</c-> <c- p>{</c->
-  <c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>Self</c-><c- o>></c->
-  <c- n>Self</c-><c- o>&amp;</c-> <c- k>operator</c-><c- o>-=</c-><c- p>(</c-><c- k>this</c-> <c- n>Self</c-><c- o>&amp;</c-> <c- n>self</c-><c- p>,</c-> <c- n>type</c-><c- o>&lt;</c-><c- n>Self</c-><c- o>></c-> <c- k>const</c-><c- o>&amp;</c-> <c- n>other</c-><c- p>)</c-> <c- p>{</c->
-    <c- n>self</c-> <c- o>+=</c-> <c- o>-</c-><c- n>other</c-><c- p>;</c->
-    <c- k>return</c-> <c- n>self</c-><c- p>;</c->
-  <c- p>}</c->
-  <c- c1>// type&lt;T> just disables argument deduction, see Appendix a.</c->
+   <p>Template argument deduction is a basic feature of C++ templates. There are several quite distinct uses of it:</p>
+   <ul>
+    <li data-md>
+     <p>to instantiate a generic algorithm for a given type (<code class="highlight"><c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>T</c-><c- o>></c-> <c- k>auto</c-> <c- n>min</c-><c- p>(</c-><c- n>T</c-><c- p>,</c-> <c- n>T</c-><c- p>)</c-></code>)</p>
+    <li data-md>
+     <p>handle various combinations of cv-ref qualifiers (<code class="highlight"><c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>T</c-><c- o>></c-> <c- k>auto</c-> <c- n>foo</c-><c- p>(</c-><c- n>T</c-><c- o>&amp;&amp;</c-><c- p>)</c-></code>)</p>
+    <li data-md>
+     <p>disable a function instantiation using SFINAE or the new <code class="highlight"><c- n>requires</c-></code> machinery (<code class="highlight"><c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>T</c-><c- o>></c-> <c- k>auto</c-> <c- n>foo</c-><c- p>(</c-><c- n>T</c-><c- p>)</c-> <c- n>requires</c-> <c- n>predicate</c-><c- o>&lt;</c-><c- n>T</c-><c- o>></c-></code>)</p>
+    <li data-md>
+     <p>combinations of above</p>
+   </ul>
+   <p>For an illustration, humor a contrived example. Consider a <code class="highlight"><c- n>get</c-></code> for a simple value container, which is intended to be inherited from:</p>
+<pre class="language-cpp highlight"><c- k>struct</c-> <c- n>box</c-> <c- p>{</c->
+  <c- n>std</c-><c- o>::</c-><c- n>vector</c-><c- o>&lt;</c-><c- b>int</c-><c- o>></c-> <c- n>value</c-><c- p>;</c->
 <c- p>};</c->
 
-<c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>U</c-><c- o>></c->
-<c- k>struct</c-> <c- nl>my</c-> <c- p>:</c-> <c- n>provide_autominus</c-> <c- p>{</c->
-  <c- n>U</c-> <c- n>m_value</c-><c- p>;</c->
 
-  <c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>Self</c-><c- o>></c->
-  <c- n>Self</c-> <c- k>operator</c-><c- o>-</c-><c- p>(</c-><c- k>this</c-> <c- n>Self</c-> <c- k>const</c-><c- o>&amp;</c-><c- p>)</c-> <c- p>{</c->
-    <c- k>return</c-> <c- p>{</c-><c- o>-</c-><c- n>m_value</c-><c- p>};</c->
-  <c- p>}</c->
-
-  <c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>Self</c-><c- o>></c->
-  <c- n>Self</c-><c- o>&amp;&amp;</c-> <c- k>operator</c-><c- o>+=</c-><c- p>(</c-><c- k>this</c-> <c- n>Self</c-><c- o>&amp;&amp;</c-> <c- n>self</c-><c- p>,</c-> <c- n>type</c-><c- o>&lt;</c-><c- n>Self</c-><c- o>></c-> <c- k>const</c-><c- o>&amp;</c-> <c- n>other</c-><c- p>)</c-> <c- p>{</c->
-    <c- n>m_value</c-> <c- o>+=</c-> <c- n>other</c-><c- p>.</c-><c- n>value</c-><c- p>();</c->
-    <c- k>return</c-> <c- n>self</c-><c- p>;</c->  <c- c1>// fixed in P0527R1</c->
-  <c- p>}</c->
-
-  <c- c1>// generates my&lt;T>&amp;, const&amp;, &amp;&amp; and const&amp;&amp; versions in regular usage</c->
-  <c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>Self</c-><c- o>></c->
-  <c- k>decltype</c-><c- p>(</c-><c- k>auto</c-><c- p>)</c-> <c- n>value</c-><c- p>(</c-><c- k>this</c-> <c- n>Self</c-><c- o>&amp;&amp;</c-> <c- n>self</c-><c- p>)</c-> <c- p>{</c->
-    <c- k>return</c-> <c- n>std</c-><c- o>::</c-><c- n>forward</c-><c- o>&lt;</c-><c- n>Self</c-><c- o>></c-><c- p>(</c-><c- n>self</c-><c- p>).</c-><c- n>m_value</c-><c- p>;</c->
-  <c- p>}</c->
-<c- p>};</c->
-
-<c- k>struct</c-> <c- nl>in_meters</c-> <c- p>:</c-> <c- n>my</c-><c- o>&lt;</c-><c- b>int</c-><c- o>></c-> <c- p>{};</c->
-<c- k>struct</c-> <c- nl>in_feet</c-> <c- p>:</c-> <c- n>my</c-><c- o>&lt;</c-><c- b>int</c-><c- o>></c-> <c- p>{};</c->
+<c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>Box</c-><c- o>></c->
+<c- k>decltype</c-><c- p>(</c-><c- k>auto</c-><c- p>)</c-> <c- n>get</c-><c- p>(</c-><c- n>Box</c-><c- o>&amp;&amp;</c-> <c- n>x</c-><c- p>)</c->
+    <c- n>requires</c-> <c- n>DerivedFrom</c-><c- o>&lt;</c-><c- n>B</c-><c- p>,</c-> <c- n>box</c-><c- o>></c-> <c- p>{</c->
+  <c- c1>// borrow forward_like from [[D0847]] - like std::forward, but forwards</c->
+  <c- c1>// its parameter based on the value-category of the template parameter.</c->
+  <c- k>return</c-> <c- n>std</c-><c- o>::</c-><c- n>forward_like</c-><c- o>&lt;</c-><c- n>Box</c-><c- o>></c-><c- p>(</c-><c- n>x</c-><c- p>.</c-><c- n>box</c-><c- o>::</c-><c- n>value</c-><c- p>);</c-> <c- d>/* access the *box* value */</c->
+<c- p>}</c->
 </pre>
-   <p>This works wonderfully, because <code class="highlight"><c- n>in_meters</c-><c- p>{</c-><c- mi>5</c-><c- p>}</c-></code> cannot be combined with <code class="highlight"><c- n>in_feet</c-><c- p>{</c-><c- mi>4</c-><c- p>}</c-></code> in any way without a separate conversion function, and yet we can
-define both as empty structs.</p>
-   <p>Note that <a data-link-type="dfn" href="#crtp" id="ref-for-crtp">CRTP</a> is not flexible enough to handle this case: <code class="highlight"><c- n>provide_autominus</c-><c- o>::</c-><c- k>operator</c-><c- o>-=</c-></code> works in terms of <code class="highlight"><c- n>in_meters</c-></code> in <code class="highlight"><c- n>in_meters</c-></code>,
-and in terms of <code class="highlight"><c- n>in_feet</c-></code> in <code class="highlight"><c- n>in_feet</c-></code>, precisely because that’s what current
-rules for template argument deduction do. This is very powerful, and far easier
-to teach than CRTP.</p>
-   <p>However, we have one method -- <code class="highlight"><c- n>my_int</c-><c- o>::</c-><c- n>value</c-><c- p>()</c-></code> -- for which this flexibility
-is not welcome. We would like <code class="highlight"><c- n>Self</c-></code> to always deduce to some cv-ref-qualified
-version of <code class="highlight"><c- n>my</c-><c- o>&lt;</c-><c- n>U</c-><c- o>></c-></code>, otherwise all we’re doing is introducing code bloat with
-extra template instantiations we did not need.</p>
-   <p>We also should not have used <code class="highlight"><c- n>self</c-><c- p>.</c-><c- n>m_value</c-></code>, as <code class="highlight"><c- n>self</c-></code> will be a reference to <code class="highlight"><c- n>in_meters</c-></code> or <code class="highlight"><c- n>in_feet</c-></code> in actual usage, and not to <code class="highlight"><c- n>my</c-><c- o>&lt;</c-><c- b>int</c-><c- o>></c-></code> (the code should
-have used <code class="highlight"><c- n>forward_like</c-><c- o>&lt;</c-><c- n>Self</c-><c- o>></c-><c- p>(</c-><c- n>m_value</c-><c- p>)</c-></code>, as referenced by P0847R1). If <code class="highlight"><c- n>in_meters</c-></code> defines its own <code class="highlight"><c- n>m_value</c-></code>, it will shadow the one that should be
-referred-to by <code class="highlight"><c- n>my</c-><c- o>&lt;</c-><c- n>U</c-><c- o>>::</c-><c- n>value</c-><c- p>()</c-></code>.</p>
+   <p>The intention is to forward the value-category of the box to the accessed value. There are only 8 possible useful instantiations of the <code class="highlight"><c- n>get</c-></code> function: <code class="highlight"><c- n>box</c-><c- o>&amp;</c-></code>, <code class="highlight"><c- n>box</c-><c- o>&amp;&amp;</c-></code>, <code class="highlight"><c- n>box</c-> <c- k>const</c-><c- o>&amp;</c-></code>, <code class="highlight"><c- n>box</c-> <c- k>const</c-><c- o>&amp;&amp;</c-></code>, and their <code class="highlight"><c- k>volatile</c-></code> versions. Since <code class="highlight"><c- n>box</c-></code> is intended to be inherited from, <code class="highlight"><c- n>get</c-></code> will get instantiatiations for every derived, however, leading to code bloat.</p>
+   <p>While the example is contrived for clarity, should <code class="highlight"><c- n>get</c-></code> be a more complex function, such code bloat does become serious, and the above has been a concern for library implementers since templates were added to the language. Every time templates become more useful, the problem gets worse; first, when forwarding references were added to the language, because they added an orthogonal reason to overload, and it will get even worse when <a data-link-type="biblio" href="#biblio-d0847r1">[D0847R1]</a> or any spiritual successor lands, because it will provide a very powerful vector for addition of functions which exhibit exactly this problem (while solving DRY for member functions).</p>
+   <p>The main issues with template code bloat are more machine code than necessary, additional exception tables and duplicate work the optimizer has to do to optimize every copy, leading to slower compile times.</p>
+   <p>There is a separate issue from code bloat, however. When writing templates that are really supposed to operate on a particular base-class type, one has to qualify every member access with the type’s name, because derived classes can shadow those methods. This will become far more prevalent should <a data-link-type="biblio" href="#biblio-d0847r1">[D0847R1]</a> land. Deduction expressions are a flexible way to solve a variety of issues such an extension would introduce, in addition to being an extremely powerful way to constrain template instantiation in deduced contexts.</p>
    <h2 class="heading settled" data-level="2" id="solution"><span class="secno">2. </span><span class="content">Proposed Solution</span><a class="self-link" href="#solution"></a></h2>
-   <p>This paper proposes to solve the problem outlined above with a relatively simple
-and local exception to the template argument deduction rules as they exist
-today.</p>
-<pre class="language-cpp highlight"><c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>U</c-><c- o>></c->
-<c- k>struct</c-> <c- n>my</c-> <c- p>{</c->
-  <c- n>U</c-> <c- n>m_value</c-><c- p>;</c->
-  <c- c1>// ...</c->
-  <c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>Self</c-><c- o>></c->
-  <c- k>decltype</c-><c- p>(</c-><c- k>auto</c-><c- p>)</c-> <c- n>value</c-><c- p>(</c-><c- k>this</c-> <c- k>explicit</c-> <c- n>Self</c-><c- o>&amp;&amp;</c-> <c- n>self</c-><c- p>)</c-> <c- p>{</c->
-    <c- k>return</c-> <c- n>std</c-><c- o>::</c-><c- n>forward</c-><c- o>&lt;</c-><c- n>Self</c-><c- o>></c-><c- p>(</c-><c- n>self</c-><c- p>).</c-><c- n>m_value</c-><c- p>;</c->
-  <c- p>}</c->
-<c- p>};</c->
+   <p>We are proposing a mechanism to allow a metafunction to compute the final deduction from the first-pass deduction that occurs in C++17.</p>
+   <h3 class="heading settled" data-level="2.1" id="basic-example"><span class="secno">2.1. </span><span class="content">Example</span><a class="self-link" href="#basic-example"></a></h3>
+<pre class="language-cpp highlight"><c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- nl>Box</c-> <c- p>:</c-> <c- n>like_t</c-><c- o>&lt;</c-><c- n>Box</c-><c- p>,</c-> <c- n>box</c-><c- o>>></c->
+<c- k>decltype</c-><c- p>(</c-><c- k>auto</c-><c- p>)</c-> <c- n>get</c-><c- p>(</c-><c- n>Box</c-><c- o>&amp;&amp;</c-> <c- n>x</c-><c- p>)</c-> <c- p>{</c->
+  <c- k>return</c-> <c- n>std</c-><c- o>::</c-><c- n>forward_like</c-><c- o>&lt;</c-><c- n>Box</c-><c- o>></c-><c- p>(</c-><c- n>x</c-><c- p>.</c-><c- n>value</c-><c- p>);</c->
+<c- p>}</c->
 </pre>
-   <p>By adding <code class="highlight"><c- k>explicit</c-></code> before <code class="highlight"><c- n>Self</c-></code> in the parameter list, we have requested that <code class="highlight"><c- n>Self</c-></code> always deduce to the type of the directly enclosing class, of which we
-are defining a member.</p>
-   <h3 class="heading settled" data-level="2.1" id="grammar"><span class="secno">2.1. </span><span class="content">Changes to the grammar</span><a class="self-link" href="#grammar"></a></h3>
-   <p>The only proposed change to the grammar is to allow explicit to modify the <code class="highlight"><c- k>this</c-></code>-designated parameter type, if it is a template parameter.</p>
-   <h2 class="heading settled" data-level="3" id="semantics"><span class="secno">3. </span><span class="content">Proposed Semantics</span><a class="self-link" href="#semantics"></a></h2>
-   <p class="note" role="note"><span>Note:</span> Exact wording needs help, because the author of the paper is not very well
-versed on this front. Nevertheless, an attempt is made in this section.</p>
-   <p>If, in a template member function <code class="highlight"><c- n>func</c-></code> of a class (or class template) <code class="highlight"><c- n>C</c-></code>,
-with a <code class="highlight"><c- k>this</c-></code>-annotated first parameter (which binds to the implicit <code class="highlight"><c- o>*</c-><c- k>this</c-></code> parameter), the type (<code class="highlight"><c- n>Self</c-></code>) of the first parameter is a template type, and is
-preceeded by the keyword <code class="highlight"><c- k>explicit</c-></code>, <code class="highlight"><c- n>Self</c-></code> shall be deduced to a cv-ref
-qualified <code class="highlight"><c- n>C</c-></code>, where the cv-ref qualifiers shall be deduced as if by current
-rules.</p>
-   <p>In other words:</p>
-<pre class="highlight"><c- k>struct</c-> <c- n>C</c-> <c- p>{</c->
-  <c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>Self</c-><c- o>></c->
-  <c- b>int</c-> <c- n>func</c-><c- p>(</c-><c- k>this</c-> <c- n>Self</c-><c- o>&amp;&amp;</c-><c- p>);</c->
-<c- p>};</c->
-</pre>
-   <p><code class="highlight"><c- n>Self</c-></code> may deduce to <code class="highlight"><c- n>C</c-></code>, <code class="highlight"><c- n>C</c-><c- o>&amp;</c-></code>, <code class="highlight"><c- n>C</c-> <c- k>const</c-></code>, <code class="highlight"><c- n>C</c-> <c- k>const</c-><c- o>&amp;</c-></code>, <code class="highlight"><c- n>C</c-> <c- k>volatile</c-></code>, <code class="highlight"><c- n>C</c-> <c- k>volatile</c-><c- o>&amp;</c-></code>, <code class="highlight"><c- n>C</c-> <c- k>const</c-> <c- k>volatile</c-></code>, <code class="highlight"><c- n>C</c-> <c- k>const</c-> <c- k>volatile</c-><c- o>&amp;</c-></code>,
-following existing rules for template argument deduction, but nothing else,
-under any circumstances.</p>
-   <h2 class="heading settled" data-level="4" id="concepts"><span class="secno">4. </span><span class="content">Could Concepts Solve This?</span><a class="self-link" href="#concepts"></a></h2>
-   <p>No. Concepts can only answer the question of whether to admit (not SFNIAE) or
-delete an overload once it has already been enumerated as a candidate for the
-overload set, which is almost no better than <code class="highlight"><c- n>enable_if</c-></code>, because it happens
-after template argument deduction has already occurred. In this case, we need
-to change the template argument deduction rules themselves, so that <code class="highlight"><c- n>my</c-><c- o>&lt;</c-><c- b>int</c-><c- o>>::</c-><c- n>value</c-><c- p>(</c-><c- k>this</c-> <c- n>my</c-><c- o>&lt;</c-><c- b>int</c-><c- o>></c-> <c- k>const</c-><c- o>&amp;</c-><c- p>)</c-></code> gets into the overload set, and not <code class="highlight"><c- n>my</c-><c- o>&lt;</c-><c- b>int</c-><c- o>>::</c-><c- n>value</c-><c- p>(</c-><c- k>this</c-> <c- n>in_meters</c-> <c- k>const</c-><c- o>&amp;</c-><c- p>)</c-></code>.</p>
-   <h2 class="heading settled" data-level="5" id="commentary"><span class="secno">5. </span><span class="content">Commentary</span><a class="self-link" href="#commentary"></a></h2>
-   <p>This is a very constrained proposal. The authors would appreciate guidance
-and/or proposals on how it could be made more general. Code bloat because of
-templates is a general problem, and constraining the type, but not the
-CV-qualifier (perhaps with a concept? explicit(Concept) might work...) for the
-purposes of <em>argument deduction</em>, not constraints, might be a better option.
-Nevertheless, in the spirit of getting at least an idea out there, this paper is
-meant as a first attempt.</p>
-   <h2 class="heading settled" data-level="6" id="acknowledgements"><span class="secno">6. </span><span class="content">Acknowledgements</span><a class="self-link" href="#acknowledgements"></a></h2>
-   <p>The authors would like to thank Alisdair Meredith, especially, as he had both
-the original complaint about the deduction rules, and the first workable
-suggestion of how to fix it.</p>
-   <p>The authors would additionally like to thank everyone who attended the C++Now
-talk "My Little *this deduction: Friendship is Uniform", for their helpful
-comments and commentary, whithout which this paper would not have gotten the
-idelological momentum to be born.</p>
-   <h2 class="heading settled" data-level="7" id="definitions"><span class="secno">7. </span><span class="content">Definitions</span><a class="self-link" href="#definitions"></a></h2>
    <ul>
     <li data-md>
-     <p><dfn class="dfn-paneled" data-dfn-type="dfn" data-noexport id="crtp">CRTP</dfn> Curiously Recurring Tempalate Pattern. A way of informing a
-base-class of the type of the child class that inherited from it. Sometimes
-used as a poor substitute for mixins, though it does have other uses.</p>
-   </ul>
-   <h2 class="heading settled" data-level="8" id="citations"><span class="secno">8. </span><span class="content">Citations</span><a class="self-link" href="#citations"></a></h2>
-   <ul>
+     <p><code class="highlight"><c- n>like_t</c-></code> copies (and overwrites) any cv-ref qualifiers on its second parameter with the ones on its first</p>
     <li data-md>
-     <p>P0527R1, D. Stone: Implicitly move from rvalue references in return statements</p>
+     <p>There is no need to use <code class="highlight"><c- n>x</c-><c- p>.</c-><c- n>box</c-><c- o>::</c-><c- n>value</c-></code> anymore, as <code class="highlight"><c- n>like_t</c-><c- o>&lt;</c-><c- n>Box</c-><c- p>,</c-> <c- n>box</c-><c- o>></c-></code> always results in a cv-qualified <code class="highlight"><c- n>box</c-></code></p>
     <li data-md>
-     <p>P0847R1, G. Ažman, S. Brand, B. Deane, B. Revzin: Deducing this</p>
+     <p>the <code class="highlight"><c- n>requires</c-></code> clause is no longer necessary, since a reference to a <code class="highlight"><c- n>box</c-></code> will always only bind to references to <code class="highlight"><c- n>box</c-></code>es and their derived classes.</p>
    </ul>
-   <h2 class="heading settled" id="appendix-a"><span class="content">Appendix a</span><a class="self-link" href="#appendix-a"></a></h2>
-   <p>The definition of <code class="highlight"><c- n>type</c-></code>:</p>
-<pre class="language-cpp highlight"><c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>T</c-><c- o>></c->
-<c- k>struct</c-> <c- n>type_s</c-> <c- p>{</c->
-  <c- k>using</c-> <c- n>type</c-> <c- o>=</c-> <c- n>T</c-><c- p>;</c->
-<c- p>};</c->
-<c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>T</c-><c- o>></c->
-<c- k>using</c-> <c- n>type</c-> <c- o>=</c-> <c- n>type_s</c-><c- o>&lt;</c-><c- n>T</c-><c- o>>::</c-><c- n>type</c-><c- p>;</c->
+   <h2 class="heading settled" data-level="3" id="syntax"><span class="secno">3. </span><span class="content">Syntax</span><a class="self-link" href="#syntax"></a></h2>
+   <h2 class="heading settled" data-level="4" id="semantics"><span class="secno">4. </span><span class="content">Proposed Semantics</span><a class="self-link" href="#semantics"></a></h2>
+   <p>This section describes the feature using a few "as if rewritten as" sections, each describing a part of the proposed mechanism.</p>
+   <h3 class="heading settled" data-level="4.1" id="deduction-semantics"><span class="secno">4.1. </span><span class="content">Deduction</span><a class="self-link" href="#deduction-semantics"></a></h3>
+   <h4 class="heading settled" data-level="4.1.1" id="deduction-types"><span class="secno">4.1.1. </span><span class="content">For a type template parameter</span><a class="self-link" href="#deduction-types"></a></h4>
+<pre class="language-cpp highlight"><c- c1>// template &lt;</c->
+<c- n>CONCEPT</c-> <c- n>T</c-> <c- o>=</c-> <c- nl>DEFAULT_EXPR</c-> <c- p>:</c-> <c- n>DEDUCTION_EXPR</c->
+<c- c1>// > void </c->
 </pre>
-   <p>We’d call it <code class="highlight"><c- n>identity</c-></code>, but it’s taken.</p>
+   <ol>
+    <li data-md>
+     <p>The deduction of <code class="highlight"><c- n>T</c-></code> proceeds normally until <code class="highlight"><c- n>T</c-></code> is deduced as per C++17 rules, with any default initializer expressions executing if necessary. Let us name this result the <em>initial deduction</em>.</p>
+    <li data-md>
+     <p>Immediately after the initial deduction is known, but before executing any <code class="highlight"><c- n>requires</c-></code> constraints, execute <code class="highlight"><c- n>DEDUCTION_EXPR</c-></code> in the with the same set name bindings available as the <code class="highlight"><c- n>DEFAULT_EXPR</c-></code> would have (or has) been run with, with the addition of <code class="highlight"><c- n>T</c-></code> being bound to the <em>initial deduction</em>. Let the value of <code class="highlight"><c- n>DEDUCTION_EXPR</c-></code> be the <em>final deduction</em>. If <code class="highlight"><c- n>DEDUCTION_EXPR</c-></code> does not evaluate to a type, this results in a substitution failure (SFINAE).</p>
+    <li data-md>
+     <p>Any <code class="highlight"><c- n>requires</c-></code> expressions that would be run in C++17 are run now, with the name <code class="highlight"><c- n>T</c-></code> being bound to the <em>final deduction</em>.</p>
+   </ol>
+   <p>Deduction of following parameters is done with the name <code class="highlight"><c- n>T</c-></code> being bound to the constrained deduction.</p>
+   <h4 class="heading settled" data-level="4.1.2" id="deduction-values"><span class="secno">4.1.2. </span><span class="content">For a value template parameter</span><a class="self-link" href="#deduction-values"></a></h4>
+   <p>The algorithm is exactly the same, but the the expression after the colon has to result in a a value. Basically, <code class="highlight"><c- n>DEDUCTION_EXPR</c-></code> has to result in something that can be bound to the way the template parameter is declared.</p>
+   <h4 class="heading settled" data-level="4.1.3" id="deduction-template-templates"><span class="secno">4.1.3. </span><span class="content">For a template-template parameter</span><a class="self-link" href="#deduction-template-templates"></a></h4>
+   <p>See values. Same rules - if it binds, it works, if it doesn’t, SFINAE.</p>
+   <h3 class="heading settled" data-level="4.2" id="sema-sig"><span class="secno">4.2. </span><span class="content">Function signature construction</span><a class="self-link" href="#sema-sig"></a></h3>
+   <p>Same as now - the deduced parameters are substituted back into the function signature (and the body of the template), with <em>deduced parameters</em> now meaning <em>final deduced parameters</em>. This may result in an invalid signature, which is a SFINAE condition.</p>
+   <h3 class="heading settled" data-level="4.3" id="overload-semantics"><span class="secno">4.3. </span><span class="content">Overload set construction</span><a class="self-link" href="#overload-semantics"></a></h3>
+   <p>The construction of the overload set is unchanged, once one takes into account that candidates are generated differently than before. Compared to C++17, the overload set consists of functions instantiated from the very same candidate templates as before, though their signatures may be different. If two templates generate the same function signature, the result is ambiguous, and therefore results in an invalid program (diagnostic required).</p>
+   <h2 class="heading settled" data-level="5" id="examples"><span class="secno">5. </span><span class="content">Examples</span><a class="self-link" href="#examples"></a></h2>
+   <h2 class="heading settled" data-level="6" id="faq"><span class="secno">6. </span><span class="content">FAQ</span><a class="self-link" href="#faq"></a></h2>
+   <h3 class="heading settled" data-level="6.1" id="faq-use-deduced"><span class="secno">6.1. </span><span class="content">Can I use a previously deduced parameter in a <code class="highlight"><c- n>DEDUCTION_EXPR</c-></code>?</span><a class="self-link" href="#faq-use-deduced"></a></h3>
+   <p>Yes! This should work:</p>
+<pre class="language-cpp highlight"><c- k>template</c-> <c- o>&lt;</c->
+  <c- k>typename</c-> <c- nl>T</c-> <c- p>:</c-> <c- n>like_t</c-><c- o>&lt;</c-><c- n>T</c-><c- p>,</c-> <c- n>box</c-><c- o>></c->
+  <c- k>typename</c-> <c- nl>U</c-> <c- p>:</c-> <c- k>decltype</c-><c- p>(</c-><c- n>declval</c-><c- o>&lt;</c-><c- n>T</c-><c- o>></c-><c- p>().</c-><c- n>value</c-><c- p>)</c->
+<c- o>></c-> <c- n>foo</c-><c- p>(</c-><c- n>T</c-><c- o>&amp;&amp;</c-><c- p>,</c-> <c- n>U</c-><c- p>)</c-> <c- p>{}</c->
+</pre>
+   <p><code class="highlight"><c- n>T</c-></code> always deduces to some cv-qualified version of <code class="highlight"><c- n>box</c-></code> or <code class="highlight"><c- n>box</c-><c- o>&amp;</c-></code>, and <code class="highlight"><c- n>U</c-></code> is coerced to the declval of the box’s value. Note that <code class="highlight"><c- n>T</c-></code> is the already fully deduced <code class="highlight"><c- n>box</c-></code> in <code class="highlight"><c- n>U</c-></code>'s <code class="highlight"><c- n>deduction</c-><c- o>-</c-><c- n>expr</c-></code>.</p>
+   <h3 class="heading settled" data-level="6.2" id="faq-initial-elsewhere"><span class="secno">6.2. </span><span class="content">Can I use the <em>initial deduction</em> in other template parameters?</span><a class="self-link" href="#faq-initial-elsewhere"></a></h3>
+   <p>In other words, given</p>
+<pre class="language-cpp highlight"><c- k>template</c-> <c- o>&lt;</c->
+  <c- k>typename</c-> <c- nl>T</c-> <c- p>:</c-> <c- b>long</c-> <c- d>/* T will *always* be long */</c-><c- p>,</c-> 
+  <c- k>typename</c-> <c- n>U</c-> <c- o>=</c-> <c- n>T</c->
+<c- o>></c->
+<c- b>void</c-> <c- n>foo</c-><c- p>(</c-><c- n>T</c-><c- p>)</c-> <c- p>{}</c->
+</pre>
+   <p>is it possible to have <code class="highlight"><c- n>U</c-></code> deduce to <code class="highlight"><c- b>int</c-></code> instead of <code class="highlight"><c- b>long</c-></code> in the call <code class="highlight"><c- n>foo</c-><c- p>(</c-><c- mi>1</c-><c- p>)</c-></code>?</p>
+   <p>The answer is <em>no</em>. There is no way to access the <em>initial deduction</em> outside of the <code class="highlight"><c- n>deduction</c-><c- o>-</c-><c- n>expr</c-></code> (though I’m sure clever metaprogrammers can find a way to export it somehow).</p>
+   <h3 class="heading settled" data-level="6.3" id="faq-no-bind"><span class="secno">6.3. </span><span class="content">What if the final signature doesn’t bind to the given parameters?</span><a class="self-link" href="#faq-no-bind"></a></h3>
+   <p>The scenario is the following:</p>
+<pre class="language-cpp highlight"><c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- nl>T</c-> <c- p>:</c-> <c- b>int</c-><c- o>></c->
+<c- b>void</c-> <c- n>foo</c-><c- p>(</c-><c- n>T</c-><c- p>)</c-> <c- p>{}</c->
+
+<c- n>foo</c-><c- p>(</c-><c- k>nullptr</c-><c- p>);</c->
+</pre>
+   <p>The initial deduction for <code class="highlight"><c- n>T</c-></code> is <code class="highlight"><c- n>nullptr_t</c-></code>, but the <code class="highlight"><c- n>deduction</c-><c- o>-</c-><c- n>expr</c-></code> for <code class="highlight"><c- n>T</c-></code> forces it to be <code class="highlight"><c- b>int</c-></code>. The resulting signature is <code class="highlight"><c- n>foo</c-><c- p>(</c-><c- b>int</c-><c- p>)</c-></code>, which does not match, and is removed from the overload set. In the absence of additional overloads for <code class="highlight"><c- n>foo</c-></code> this fails with a compilation error because there were no matching functions to call.</p>
+   <h3 class="heading settled" data-level="6.4" id="faq-same-overload"><span class="secno">6.4. </span><span class="content">What happens if two templates generate the same overload</span><a class="self-link" href="#faq-same-overload"></a></h3>
+   <p>Same as now - if the best match is ambigous, the program ill-formed (diagnostic required). Two templates resulting in the same best-match overload is a special case of this eventuality.</p>
+   <h3 class="heading settled" data-level="6.5" id="faq-but-concepts"><span class="secno">6.5. </span><span class="content">Could Concepts Solve This?</span><a class="self-link" href="#faq-but-concepts"></a></h3>
+   <p>No. Concepts can only answer the question of whether to admit or remove an overload once it has already been enumerated as a candidate for the overload set, which is almost no better than <code class="highlight"><c- n>enable_if</c-></code>, because it happens _after_ template argument deduction has already occurred. In this case, we need to change the template argument deduction rules themselves, so that the template parameter itself is deduced in a programmable fashion, and _then_ perhaps constrained by a concept.</p>
+   <h2 class="heading settled" data-level="7" id="acknowledgements"><span class="secno">7. </span><span class="content">Acknowledgements</span><a class="self-link" href="#acknowledgements"></a></h2>
+   <p>The authors would like to thank Alisdair Meredith, especially, as he had both the original complaint about the deduction rules, and the first workable suggestion of how to fix it. This solution is far more general, but every proposal needs a spark.</p>
+   <p>The authors would additionally like to thank everyone (as I don’t think there was anyone who remained silent) who attended the C++Now 2018 talk "My Little *this deduction: Friendship is Uniform", for their helpful comments, commentary, hints, tips, and ideas, whithout which this paper would not have gotten the idelological momentum to be born.</p>
   </main>
 <script>
 (function() {
@@ -1792,70 +1744,9 @@ used as a poor substitute for mixins, though it does have other uses.</p>
 
 })();
 </script>
-  <h2 class="no-num no-ref heading settled" id="index"><span class="content">Index</span><a class="self-link" href="#index"></a></h2>
-  <h3 class="no-num no-ref heading settled" id="index-defined-here"><span class="content">Terms defined by this specification</span><a class="self-link" href="#index-defined-here"></a></h3>
-  <ul class="index">
-   <li><a href="#crtp">CRTP</a><span>, in §7</span>
-  </ul>
-  <aside class="dfn-panel" data-for="crtp">
-   <b><a href="#crtp">#crtp</a></b><b>Referenced in:</b>
-   <ul>
-    <li><a href="#ref-for-crtp">1. Problem Statement</a>
-   </ul>
-  </aside>
-<script>/* script-dfn-panel */
-
-document.body.addEventListener("click", function(e) {
-    var queryAll = function(sel) { return [].slice.call(document.querySelectorAll(sel)); }
-    // Find the dfn element or panel, if any, that was clicked on.
-    var el = e.target;
-    var target;
-    var hitALink = false;
-    while(el.parentElement) {
-        if(el.tagName == "A") {
-            // Clicking on a link in a <dfn> shouldn't summon the panel
-            hitALink = true;
-        }
-        if(el.classList.contains("dfn-paneled")) {
-            target = "dfn";
-            break;
-        }
-        if(el.classList.contains("dfn-panel")) {
-            target = "dfn-panel";
-            break;
-        }
-        el = el.parentElement;
-    }
-    if(target != "dfn-panel") {
-        // Turn off any currently "on" or "activated" panels.
-        queryAll(".dfn-panel.on, .dfn-panel.activated").forEach(function(el){
-            el.classList.remove("on");
-            el.classList.remove("activated");
-        });
-    }
-    if(target == "dfn" && !hitALink) {
-        // open the panel
-        var dfnPanel = document.querySelector(".dfn-panel[data-for='" + el.id + "']");
-        if(dfnPanel) {
-            dfnPanel.classList.add("on");
-            var rect = el.getBoundingClientRect();
-            dfnPanel.style.left = window.scrollX + rect.right + 5 + "px";
-            dfnPanel.style.top = window.scrollY + rect.top + "px";
-            var panelRect = dfnPanel.getBoundingClientRect();
-            var panelWidth = panelRect.right - panelRect.left;
-            if(panelRect.right > document.body.scrollWidth && (rect.left - (panelWidth + 5)) > 0) {
-                // Reposition, because the panel is overflowing
-                dfnPanel.style.left = window.scrollX + rect.left - (panelWidth + 5) + "px";
-            }
-        } else {
-            console.log("Couldn't find .dfn-panel[data-for='" + el.id + "']");
-        }
-    } else if(target == "dfn-panel") {
-        // Switch it to "activated" state, which pins it.
-        el.classList.add("activated");
-        el.style.left = null;
-        el.style.top = null;
-    }
-
-});
-</script>
+  <h2 class="no-num no-ref heading settled" id="references"><span class="content">References</span><a class="self-link" href="#references"></a></h2>
+  <h3 class="no-num no-ref heading settled" id="informative"><span class="content">Informative References</span><a class="self-link" href="#informative"></a></h3>
+  <dl>
+   <dt id="biblio-d0847r1">[D0847R1]
+   <dd><a href="https://wg21.link/d0847r1">(Untitled)</a>. URL: <a href="https://wg21.link/d0847r1">https://wg21.link/d0847r1</a>
+  </dl>
