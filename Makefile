@@ -1,2 +1,2 @@
 all:
-	bikeshed ./explicit-t.bs
+	bikeshed ./constrained-deduction.bs

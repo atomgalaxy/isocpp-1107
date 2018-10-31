@@ -1,26 +1,30 @@
 <pre class='metadata'>
-Title: Explicit Template Argument Deduction to T
+Title: Type-constrained Deduction
 Status: D
-Audience: SG1, EWG
+Audience: EWG, SG1
 Editor: Gašper Ažman <gasper.azman@gmail.com>
 Editor: Simon Brand <simon@codeplay.com>
+Editor: Andrew Bennieston <a.j.bennieston@gmail.com>
 Shortname: P1107
 Abstract: P0847 introduces a case where standard template argument deduction
           rules are inconvenient. This paper attempts to fix that.
 Group: WG21
-Date: 2018-06-06
+Date: 2018-10-12
 Markup Shorthands: markdown yes
 Revision: 0
 ED: https://atomgalaxy.github.io/paper-explicit-t/explicit-t.html
 </pre>
 
 Problem Statement {#problem}
-=================
+============================
 
-[P0847R1: Deducing This](https://wg21.tartanllama.xyz/deducing-this/) introduces
-a wonderful feature that allows deducing a template parameter on the type and
-cv-ref qualifiers of the implicit `*this` parameter by making it explicit.
+Template argument deduction is a basic feature of C++ templates. There are several quite distinct reasons to use it: to instantiate a generic algorithm for a type, handle various combinations of cv-ref qualifiers, or disable a function instantiation using SFINAE or the new `requires` machinery.
 
+In addition, library authors have long complained that their inability to constrain deduction leads to code bloat, because every derived class type will get its own instantiation of a function, even if it only deals with the base-class type. This leads to slower compile times, and produces more machine code than necessary, if we don't even count the additional size of exception tables and the duplicate work the optimizer has to do to optimize every copy.
+
+[P0847R1: Deducing This](https://wg21.tartanllama.xyz/deducing-this/) takes this story further by introducing a wonderful feature (at least as far as the authors are concerned, where there is some overlap) that allows member function templates to deduce the *object parameter* type, thus compounding the problem of code bloat when faced with derived types.
+
+--- EDIT LINE
 It looks like this:
 
 ```cpp
@@ -200,3 +204,7 @@ using type = type_s<T>::type;
 ```
 
 We'd call it `identity`, but it's taken.
+
+<!--
+  vim: textwidth=0 ft=markdown
+-->
