@@ -8,10 +8,10 @@ Editor: Andrew Bennieston <a.j.bennieston@gmail.com>
 Shortname: P1107
 Abstract: The inability to constrain function template argument deduction causes un-necessary template instantiations, as well as frequent use of SFINAE to disable specific undesirable overloads. This paper proposes a way to intercept the deduction of template arguments and compute them.
 Group: WG21
-Date: 2018-10-12
+Date: 2018-11-01
 Markup Shorthands: markdown yes
 Revision: 0
-ED: https://atomgalaxy.github.io/paper-explicit-T/constrained-deduction.html
+ED: https://atomgalaxy.github.io/isocpp-1107/D1107.html
 </pre>
 
 Problem Statement {#problem}
@@ -34,7 +34,7 @@ struct box {
 template <typename Box>
 decltype(auto) get(Box&& x)
     requires DerivedFrom<B, box> {
-  // borrow forward_like from [[D0847]] - like std::forward, but forwards
+  // borrow forward_like from [[p0847r1]] - like std::forward, but forwards
   // its parameter based on the value-category of the template parameter.
   return std::forward_like<Box>(x.box::value); /* access the *box* value */
 }
@@ -42,11 +42,11 @@ decltype(auto) get(Box&& x)
 
 The intention is to forward the value-category of the box to the accessed value. There are only 8 possible useful instantiations of the `get` function: `box&`, `box&&`, `box const&`, `box const&&`, and their `volatile` versions. Since `box` is intended to be inherited from, `get` will get instantiatiations for every derived, however, leading to code bloat.
 
-While the example is contrived for clarity, should `get` be a more complex function, such code bloat does become serious, and the above has been a concern for library implementers since templates were added to the language. Every time templates become more useful, the problem gets worse; first, when forwarding references were added to the language, because they added an orthogonal reason to overload, and it will get even worse when [[D0847R1]] or any spiritual successor lands, because it will provide a very powerful vector for addition of functions which exhibit exactly this problem (while solving DRY for member functions).
+While the example is contrived for clarity, should `get` be a more complex function, such code bloat does become serious, and the above has been a concern for library implementers since templates were added to the language. Every time templates become more useful, the problem gets worse; first, when forwarding references were added to the language, because they added an orthogonal reason to overload, and it will get even worse when [[p0847r1]] or any spiritual successor lands, because it will provide a very powerful vector for addition of functions which exhibit exactly this problem (while solving DRY for member functions).
 
 The main issues with template code bloat are more machine code than necessary, additional exception tables and duplicate work the optimizer has to do to optimize every copy, leading to slower compile times.
 
-There is a separate issue from code bloat, however. When writing templates that are really supposed to operate on a particular base-class type, one has to qualify every member access with the type's name, because derived classes can shadow those methods. This will become far more prevalent should [[D0847R1]] land. Deduction expressions are a flexible way to solve a variety of issues such an extension would introduce, in addition to being an extremely powerful way to constrain template instantiation in deduced contexts.
+There is a separate issue from code bloat, however. When writing templates that are really supposed to operate on a particular base-class type, one has to qualify every member access with the type's name, because derived classes can shadow those methods. This will become far more prevalent should [[p0847r1]] land. Deduction expressions are a flexible way to solve a variety of issues such an extension would introduce, in addition to being an extremely powerful way to constrain template instantiation in deduced contexts.
 
 
 Proposed Solution {#solution}

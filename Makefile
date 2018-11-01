@@ -1,2 +1,2 @@
 all:
-	bikeshed ./constrained-deduction.bs
+	bikeshed spec ./D1107.bs

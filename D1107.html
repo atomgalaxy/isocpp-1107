@@ -1228,9 +1228,9 @@ Possible extra rowspan handling
     }
   </style>
   <meta content="Bikeshed version 04b354547d55896d854a81cffb3965bd6f8758ec" name="generator">
-  <link href="https://atomgalaxy.github.io/paper-explicit-T/constrained-deduction.html" rel="canonical">
+  <link href="https://atomgalaxy.github.io/isocpp-1107/D1107.html" rel="canonical">
   <link href="https://isocpp.org/favicon.ico" rel="icon">
-  <meta content="b4bdf522fc7feb2b5059572ff47eee942567c73f" name="document-revision">
+  <meta content="6bf3ba8b756e9e0d51a84476deb4843de8f9a399" name="document-revision">
 <style>/* style-md-lists */
 
 /* This is a weird hack for me not yet following the commonmark spec
@@ -1440,11 +1440,11 @@ pre .property::before, pre .property::after {
   <div class="head">
    <p data-fill-with="logo"></p>
    <h1 class="p-name no-ref" id="title">P1107R0<br>Constrained Deduction</h1>
-   <h2 class="no-num no-toc no-ref heading settled" id="subtitle"><span class="content">Draft Proposal, <time class="dt-updated" datetime="2018-10-12">2018-10-12</time></span></h2>
+   <h2 class="no-num no-toc no-ref heading settled" id="subtitle"><span class="content">Draft Proposal, <time class="dt-updated" datetime="2018-11-01">2018-11-01</time></span></h2>
    <div data-fill-with="spec-metadata">
     <dl>
      <dt>This version:
-     <dd><a class="u-url" href="https://atomgalaxy.github.io/paper-explicit-T/constrained-deduction.html">https://atomgalaxy.github.io/paper-explicit-T/constrained-deduction.html</a>
+     <dd><a class="u-url" href="https://atomgalaxy.github.io/isocpp-1107/D1107.html">https://atomgalaxy.github.io/isocpp-1107/D1107.html</a>
      <dt>Authors:
      <dd>
       <dd class="editor p-author h-card vcard"><span class="p-name fn">Gašper Ažman &lt;gasper.azman@gmail.com></span>
@@ -1528,15 +1528,15 @@ pre .property::before, pre .property::after {
 <c- k>template</c-> <c- o>&lt;</c-><c- k>typename</c-> <c- n>Box</c-><c- o>></c->
 <c- k>decltype</c-><c- p>(</c-><c- k>auto</c-><c- p>)</c-> <c- n>get</c-><c- p>(</c-><c- n>Box</c-><c- o>&amp;&amp;</c-> <c- n>x</c-><c- p>)</c->
     <c- n>requires</c-> <c- n>DerivedFrom</c-><c- o>&lt;</c-><c- n>B</c-><c- p>,</c-> <c- n>box</c-><c- o>></c-> <c- p>{</c->
-  <c- c1>// borrow forward_like from [[D0847]] - like std::forward, but forwards</c->
+  <c- c1>// borrow forward_like from [[p0847r1]] - like std::forward, but forwards</c->
   <c- c1>// its parameter based on the value-category of the template parameter.</c->
   <c- k>return</c-> <c- n>std</c-><c- o>::</c-><c- n>forward_like</c-><c- o>&lt;</c-><c- n>Box</c-><c- o>></c-><c- p>(</c-><c- n>x</c-><c- p>.</c-><c- n>box</c-><c- o>::</c-><c- n>value</c-><c- p>);</c-> <c- d>/* access the *box* value */</c->
 <c- p>}</c->
 </pre>
    <p>The intention is to forward the value-category of the box to the accessed value. There are only 8 possible useful instantiations of the <code class="highlight"><c- n>get</c-></code> function: <code class="highlight"><c- n>box</c-><c- o>&amp;</c-></code>, <code class="highlight"><c- n>box</c-><c- o>&amp;&amp;</c-></code>, <code class="highlight"><c- n>box</c-> <c- k>const</c-><c- o>&amp;</c-></code>, <code class="highlight"><c- n>box</c-> <c- k>const</c-><c- o>&amp;&amp;</c-></code>, and their <code class="highlight"><c- k>volatile</c-></code> versions. Since <code class="highlight"><c- n>box</c-></code> is intended to be inherited from, <code class="highlight"><c- n>get</c-></code> will get instantiatiations for every derived, however, leading to code bloat.</p>
-   <p>While the example is contrived for clarity, should <code class="highlight"><c- n>get</c-></code> be a more complex function, such code bloat does become serious, and the above has been a concern for library implementers since templates were added to the language. Every time templates become more useful, the problem gets worse; first, when forwarding references were added to the language, because they added an orthogonal reason to overload, and it will get even worse when <a data-link-type="biblio" href="#biblio-d0847r1">[D0847R1]</a> or any spiritual successor lands, because it will provide a very powerful vector for addition of functions which exhibit exactly this problem (while solving DRY for member functions).</p>
+   <p>While the example is contrived for clarity, should <code class="highlight"><c- n>get</c-></code> be a more complex function, such code bloat does become serious, and the above has been a concern for library implementers since templates were added to the language. Every time templates become more useful, the problem gets worse; first, when forwarding references were added to the language, because they added an orthogonal reason to overload, and it will get even worse when <a data-link-type="biblio" href="#biblio-p0847r1">[p0847r1]</a> or any spiritual successor lands, because it will provide a very powerful vector for addition of functions which exhibit exactly this problem (while solving DRY for member functions).</p>
    <p>The main issues with template code bloat are more machine code than necessary, additional exception tables and duplicate work the optimizer has to do to optimize every copy, leading to slower compile times.</p>
-   <p>There is a separate issue from code bloat, however. When writing templates that are really supposed to operate on a particular base-class type, one has to qualify every member access with the type’s name, because derived classes can shadow those methods. This will become far more prevalent should <a data-link-type="biblio" href="#biblio-d0847r1">[D0847R1]</a> land. Deduction expressions are a flexible way to solve a variety of issues such an extension would introduce, in addition to being an extremely powerful way to constrain template instantiation in deduced contexts.</p>
+   <p>There is a separate issue from code bloat, however. When writing templates that are really supposed to operate on a particular base-class type, one has to qualify every member access with the type’s name, because derived classes can shadow those methods. This will become far more prevalent should <a data-link-type="biblio" href="#biblio-p0847r1">[p0847r1]</a> land. Deduction expressions are a flexible way to solve a variety of issues such an extension would introduce, in addition to being an extremely powerful way to constrain template instantiation in deduced contexts.</p>
    <h2 class="heading settled" data-level="2" id="solution"><span class="secno">2. </span><span class="content">Proposed Solution</span><a class="self-link" href="#solution"></a></h2>
    <p>We are proposing a mechanism to allow a metafunction to compute the final deduction from the first-pass deduction that occurs in C++17.</p>
    <h3 class="heading settled" data-level="2.1" id="basic-example"><span class="secno">2.1. </span><span class="content">Example</span><a class="self-link" href="#basic-example"></a></h3>
@@ -1747,6 +1747,6 @@ pre .property::before, pre .property::after {
   <h2 class="no-num no-ref heading settled" id="references"><span class="content">References</span><a class="self-link" href="#references"></a></h2>
   <h3 class="no-num no-ref heading settled" id="informative"><span class="content">Informative References</span><a class="self-link" href="#informative"></a></h3>
   <dl>
-   <dt id="biblio-d0847r1">[D0847R1]
-   <dd><a href="https://wg21.link/d0847r1">(Untitled)</a>. URL: <a href="https://wg21.link/d0847r1">https://wg21.link/d0847r1</a>
+   <dt id="biblio-p0847r1">[P0847R1]
+   <dd>Gašper Ažman, Simon Brand, Ben Deane, Barry Revzin. <a href="https://wg21.link/p0847r1">Deducing this</a>. 7 October 2018. URL: <a href="https://wg21.link/p0847r1">https://wg21.link/p0847r1</a>
   </dl>
