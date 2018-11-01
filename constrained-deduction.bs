@@ -11,7 +11,7 @@ Group: WG21
 Date: 2018-10-12
 Markup Shorthands: markdown yes
 Revision: 0
-ED: https://atomgalaxy.github.io/paper-explicit-t/constrained-deduction.html
+ED: https://atomgalaxy.github.io/paper-explicit-T/constrained-deduction.html
 </pre>
 
 Problem Statement {#problem}
