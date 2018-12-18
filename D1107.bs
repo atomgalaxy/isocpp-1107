@@ -3,7 +3,7 @@ Title: Constrained Deduction
 Status: D
 Audience: EWG
 Editor: Gašper Ažman <gasper.azman@gmail.com>
-Editor: Simon Brand <simon@codeplay.com>
+Editor: Simon Brand <simon.brand@microsoft.com>
 Editor: Andrew Bennieston <a.j.bennieston@gmail.com>
 Shortname: P1107
 Abstract: The inability to constrain function template argument deduction causes un-necessary template instantiations, as well as frequent use of SFINAE to disable specific undesirable overloads. This paper proposes a way to intercept the deduction of template arguments and compute them.
@@ -17,10 +17,10 @@ ED: https://atomgalaxy.github.io/isocpp-1107/D1107.html
 Problem Statement {#problem}
 ============================
 
-Template argument deduction is a basic feature of C++ templates. There are several quite distinct uses of it:
+Template argument deduction is a basic feature of C++ templates. There are several distinct uses of it:
 - to instantiate a generic algorithm for a given type (`template <typename T> auto min(T, T)`)
 - handle various combinations of cv-ref qualifiers (`template <typename T> auto foo(T&&)`)
-- disable a function instantiation using SFINAE or the new `requires` machinery (`template <typename T> auto foo(T) requires predicate<T>`)
+- disable a function specialization using SFINAE or the new `requires` machinery (`template <typename T> auto foo(T) requires predicate<T>`)
 - combinations of above
 
 For an illustration, humor a contrived example. Consider a `get` for a simple value container, which is intended to be inherited from:
@@ -40,9 +40,9 @@ decltype(auto) get(Box&& x)
 }
 ```
 
-The intention is to forward the value-category of the box to the accessed value. There are only 8 possible useful instantiations of the `get` function: `box&`, `box&&`, `box const&`, `box const&&`, and their `volatile` versions. Since `box` is intended to be inherited from, `get` will get instantiatiations for every derived, however, leading to code bloat.
+The intention is to forward the value-category of the box to the accessed value. There are only 8 possible useful instantiations of the `get` function: `box&`, `box&&`, `box const&`, `box const&&`, and their `volatile` versions. However, since `box` is intended to be inherited from, `get` will be instantiated for every derived type, leading to code bloat for non-inlined functions.
 
-While the example is contrived for clarity, should `get` be a more complex function, such code bloat does become serious, and the above has been a concern for library implementers since templates were added to the language. Every time templates become more useful, the problem gets worse; first, when forwarding references were added to the language, because they added an orthogonal reason to overload, and it will get even worse when [[p0847r1]] or any spiritual successor lands, because it will provide a very powerful vector for addition of functions which exhibit exactly this problem (while solving DRY for member functions).
+While the example is contrived for clarity, should `get` be a more complex function, such code bloat does become serious, and the above has been a concern for library implementers since templates were added to the language. Every time templates become more useful, the problem gets worse. For example, forwarding references added an orthogonal reason to write functions as templates. It will get even worse when [[p0847r1]] or any spiritual successor lands, because it will provide a very powerful vector for addition of functions which exhibit exactly this problem (while solving DRY for member functions).
 
 The main issues with template code bloat are more machine code than necessary, additional exception tables and duplicate work the optimizer has to do to optimize every copy, leading to slower compile times.
 
@@ -65,7 +65,7 @@ decltype(auto) get(Box&& x) {
 }
 ```
 
-- `like_t` copies (and overwrites) any cv-ref qualifiers on its second parameter with the ones on its first
+- `like_t` copies (and overwrites) any cv-ref qualifiers on its second parameter with those on its first
 - There is no need to use `x.box::value` anymore, as `like_t<Box, box>` always results in a cv-qualified `box`
 - the `requires` clause is no longer necessary, since a reference to a `box` will always only bind to references to `box`es and their derived classes.
 
@@ -73,7 +73,23 @@ decltype(auto) get(Box&& x) {
 Syntax {#syntax}
 ================
 
+The proposed syntax is a strict extension of what is syntactically allowed in a *template-parameter*: the syntax is currently not allowed, so will cause no source breakages.
 
+We propose to allow non-variadic template parameters (either type, non-type, or template) to be suffixed with `: <final-deduction>`. `<final-deduction>` is a *type-id* for type template parameters, an *initializer-clause* for non-type template parameters, or an *id-expression* for template template parameters. More concretely, the following grammar production rules are allowed for *type-parameter*s:
+
+- *type-parameter-key identifier*<sub>*opt*</sub> : *type-id*
+- *type-parameter-key identifier*<sub>*opt*</sub> = *type-id* : *type-id*
+- *type-constraint identifier*<sub>*opt*</sub> : *type-id*
+- *type-constraint identifier*<sub>*opt*</sub> = *type-id* : *type-id*
+- *template-head type-parameter-key identifier*<sub>*opt*</sub> : *id-expression*
+- *template-head type-parameter-key identifier*<sub>*opt*</sub> = *id-expression* : *id-expression*
+
+Additionally, these rules are allowed for *parameter-declaration*s:
+
+- *attribute-specifier-seq*<sub>*opt*</sub> *decl-specifier-seq declarator* : *initializer-clause*
+- *attribute-specifier-seq*<sub>*opt*</sub> *decl-specifier-seq declarator* = *initializer-clause* : *initializer-clause*
+- *attribute-specifier-seq*<sub>*opt*</sub> *decl-specifier-seq abstract-declarator*<sub>*opt*</sub> : *initializer-clause*
+- *attribute-specifier-seq*<sub>*opt*</sub> *decl-specifier-seq abstract-declarator*<sub>*opt*</sub> = *initializer-clause* : *initializer-clause*
 
 Proposed Semantics {#semantics}
 ===============================
@@ -93,14 +109,14 @@ CONCEPT T = DEFAULT_EXPR : DEDUCTION_EXPR
 ```
 
 1. The deduction of `T` proceeds normally until `T` is deduced as per C++17 rules, with any default initializer expressions executing if necessary. Let us name this result the *initial deduction*.
-2. Immediately after the initial deduction is known, but before executing any `requires` constraints, execute `DEDUCTION_EXPR` in the with the same set name bindings available as the `DEFAULT_EXPR` would have (or has) been run with, with the addition of `T` being bound to the *initial deduction*. Let the value of `DEDUCTION_EXPR` be the *final deduction*. If `DEDUCTION_EXPR` does not evaluate to a type, this results in a substitution failure (SFINAE).
+2. Immediately after the initial deduction is known, but before executing any `requires` constraints, execute `DEDUCTION_EXPR` with the same set name bindings available as the `DEFAULT_EXPR` would have (or has) been run with, with the addition of `T` being bound to the *initial deduction*. Let the value of `DEDUCTION_EXPR` be the *final deduction*. If `DEDUCTION_EXPR` does not evaluate to a type, this results in a substitution failure (SFINAE).
 3. Any `requires` expressions that would be run in C++17 are run now, with the name `T` being bound to the *final deduction*.
 
 Deduction of following parameters is done with the name `T` being bound to the constrained deduction.
 
 ### For a value template parameter ### {#deduction-values}
 
-The algorithm is exactly the same, but the the expression after the colon has to result in a a value. Basically, `DEDUCTION_EXPR` has to result in something that can be bound to the way the template parameter is declared.
+The algorithm is exactly the same, but the the expression after the colon has to result in a value. Basically, `DEDUCTION_EXPR` has to result in something that can be bound to the way the template parameter is declared.
 
 ### For a template-template parameter ### {#deduction-template-templates}
 
@@ -116,7 +132,7 @@ Same as now - the deduced parameters are substituted back into the function sign
 Overload set construction {#overload-semantics}
 -----------------------------------------------
 
-The construction of the overload set is unchanged, once one takes into account that candidates are generated differently than before. Compared to C++17, the overload set consists of functions instantiated from the very same candidate templates as before, though their signatures may be different. If two templates generate the same function signature, the result is ambiguous, and therefore results in an invalid program (diagnostic required).
+The construction of the overload set is unchanged, once one takes into account that candidates are generated differently than before. Compared to C++17, the overload set consists of functions instantiated from the very same candidate templates as before, though their signatures may be different. If two templates generate the same function signature, the result is ambiguous, and therefore results in an ill-formed program (diagnostic required).
 
 
 Examples {#examples}
@@ -157,7 +173,7 @@ void foo(T) {}
 
 is it possible to have `U` deduce to `int` instead of `long` in the call `foo(1)`?
 
-The answer is *no*. There is no way to access the *initial deduction* outside of the `deduction-expr` (though I'm sure clever metaprogrammers can find a way to export it somehow).
+The answer is *no*. There is no way to access the *initial deduction* outside of the `deduction-expr` (though we're sure clever metaprogrammers can find a way to export it somehow).
 
 
 
@@ -179,7 +195,7 @@ The initial deduction for `T` is `nullptr_t`, but the `deduction-expr` for `T` f
 What happens if two templates generate the same overload {#faq-same-overload}
 -----------------------------------------------------------------------------
 
-Same as now - if the best match is ambigous, the program ill-formed (diagnostic required). Two templates resulting in the same best-match overload is a special case of this eventuality.
+Same as now - if the best match is ambiguous, the program is ill-formed (diagnostic required). Two templates resulting in the same best-match overload is a special case of this eventuality.
 
 
 Could Concepts Solve This? {#faq-but-concepts}
@@ -193,7 +209,7 @@ Acknowledgements {#acknowledgements}
 
 The authors would like to thank Alisdair Meredith, especially, as he had both the original complaint about the deduction rules, and the first workable suggestion of how to fix it. This solution is far more general, but every proposal needs a spark.
 
-The authors would additionally like to thank everyone (as I don't think there was anyone who remained silent) who attended the C++Now 2018 talk "My Little \*this deduction: Friendship is Uniform", for their helpful comments, commentary, hints, tips, and ideas, whithout which this paper would not have gotten the idelological momentum to be born.
+The authors would additionally like to thank everyone (as I don't think there was anyone who remained silent) who attended the C++Now 2018 talk "My Little \*this deduction: Friendship is Uniform", for their helpful comments, commentary, hints, tips, and ideas, without which this paper would not have gotten the ideolological momentum to be born.
 
 
 <!--
