@@ -73,8 +73,11 @@ There are compiler (and linker) optimizations that help with the space usage (se
 
 ### We have to write this:
 ```cpp
-template <std::derived_from<box> Box>
-decltype(auto) get(Box&& x) {
+template <typename Box>
+decltype(auto) get(Box&& x)
+  require std::derived_from<
+    std::remove_cvref_t<Box>, box>>
+{
   // Need to to qualify every access
   // in case of shadowing
   return std::forward<Box>(x).box::value;
@@ -83,10 +86,11 @@ decltype(auto) get(Box&& x) {
 
 ### When we would like to write this:
 ```cpp
-template <std::derived_from<box> Box
+template <typename Box
           /* but coerce to 
              box[const?(&|&&)] */>
-decltype(auto) get(Box&& x) {
+decltype(auto) get(Box&& x)
+{
   // we can assume x is a reference
   // to a box, and not a derived
   return std::forward<Box>(x).value;
@@ -133,8 +137,6 @@ template <typename Box
           /* but coerce to 
              box[const?(&|&&)] */>
 decltype(auto) get(Box&& x)
-  require std::derived_from<
-    std::remove_cvref_t<Box>, box>>
 {
   // we can assume x is a reference
   // to a box, and not a derived
