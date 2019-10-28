@@ -1,27 +1,33 @@
-<pre class='metadata'>
-Title: Constrained Deduction
-Status: D
-Audience: EWG
-Editor: Gašper Ažman <gasper.azman@gmail.com>
-Editor: Simon Brand <simon@codeplay.com>
-Editor: Andrew Bennieston <a.j.bennieston@gmail.com>
-Shortname: P1107
-Abstract: The inability to constrain function template argument deduction causes un-necessary template instantiations, as well as frequent use of SFINAE to disable specific undesirable overloads. This paper proposes a way to intercept the deduction of template arguments and compute them.
-Group: WG21
-Date: 2018-11-01
-Markup Shorthands: markdown yes
-Revision: 0
-ED: https://atomgalaxy.github.io/isocpp-1107/D1107.html
-</pre>
+---
+title: Computed Deduction
+document: D1107R0
+date: today
+audience:
+  - Evolution Incubator Working Group
+  - Evolution Working Group
+author:
+  - name: Gašper Ažman
+    email: <gasper.azman@gmail.com>
+  - name: Simon Brand
+    email: <simon@codeplay.com>
+  - name: Andrew Bennieston
+    email: <a.j.bennieston@gmail.com>
+  - name: Thomas Russel
+---
+
+Abstract
+========
+The inability to constrain function template argument deduction causes un-necessary template instantiations, as well as frequent use of SFINAE to disable specific undesirable overloads. This paper proposes a way to intercept the deduction of template arguments and compute them.
 
 Problem Statement {#problem}
 ============================
 
 Template argument deduction is a basic feature of C++ templates. There are several quite distinct uses of it:
-- to instantiate a generic algorithm for a given type (`template <typename T> auto min(T, T)`)
-- handle various combinations of cv-ref qualifiers (`template <typename T> auto foo(T&&)`)
-- disable a function instantiation using SFINAE or the new `requires` machinery (`template <typename T> auto foo(T) requires predicate<T>`)
-- combinations of above
+
+* to instantiate a generic algorithm for a given type (`template <typename T> auto min(T, T)`)
+* handle various combinations of cv-ref qualifiers (`template <typename T> auto foo(T&&)`)
+* disable a function instantiation using SFINAE or the new `requires` machinery (`template <typename T> auto foo(T) requires predicate<T>`)
+* combinations of above
 
 For an illustration, humor a contrived example. Consider a `get` for a simple value container, which is intended to be inherited from:
 
@@ -30,50 +36,199 @@ struct box {
   std::vector<int> value;
 };
 
-
 template <typename Box>
 decltype(auto) get(Box&& x)
-    requires DerivedFrom<B, box> {
-  // borrow forward_like from [[p0847r1]] - like std::forward, but forwards
-  // its parameter based on the value-category of the template parameter.
-  return std::forward_like<Box>(x.box::value); /* access the *box* value */
+    requires std::derived_from<B, box> {
+  return std::forward<Box>(x).box::value; /* access the *box* value */
 }
 ```
 
-The intention is to forward the value-category of the box to the accessed value. There are only 8 possible useful instantiations of the `get` function: `box&`, `box&&`, `box const&`, `box const&&`, and their `volatile` versions. Since `box` is intended to be inherited from, `get` will get instantiatiations for every derived, however, leading to code bloat.
+The intention is to forward the value-category of the box to the accessed value. There are only 8 possible useful instantiations of the `get` function:
 
-While the example is contrived for clarity, should `get` be a more complex function, such code bloat does become serious, and the above has been a concern for library implementers since templates were added to the language. Every time templates become more useful, the problem gets worse; first, when forwarding references were added to the language, because they added an orthogonal reason to overload, and it will get even worse when [[p0847r1]] or any spiritual successor lands, because it will provide a very powerful vector for addition of functions which exhibit exactly this problem (while solving DRY for member functions).
+* `get<box&>`
+* `get<box&&>`
+* `get<box const&>`
+* `get<box const&&>`
+* and possibly their `volatile` versions, though those are unlikely to be useful.
 
-The main issues with template code bloat are more machine code than necessary, additional exception tables and duplicate work the optimizer has to do to optimize every copy, leading to slower compile times.
+Recall that `box` is intended to be inherited from. For any `struct derived : box {};`, `get` will get an instantiatiation of `get<derived[(const|volatile)?(&|&&)>`, leading to code bloat.
 
-There is a separate issue from code bloat, however. When writing templates that are really supposed to operate on a particular base-class type, one has to qualify every member access with the type's name, because derived classes can shadow those methods. This will become far more prevalent should [[p0847r1]] land. Deduction expressions are a flexible way to solve a variety of issues such an extension would introduce, in addition to being an extremely powerful way to constrain template instantiation in deduced contexts.
+While the example _is_ contrived for clarity, should `get` be a more complex function, such code bloat becomes a problem for library implementers. As templates become more useful, the problem gets worse, because there are more reasons for function template instantiations that result in identical (or functionally equivalent) assembly:
+
+1. C++11: forwarding references add an orthogonal reason to overload,
+2. C++20: concepts encourage more function templates by much easier constraints,
+4. c++20: consteval functions called in the function template instantiation process inflate compile times,
+3. C++2b: When [[p0847r1]] (or spiritual successor) allows multiple concrete overloads to become a single function template,
+5. C++2c: Reflection and subsequent procedural code-generation driven from function template instantiations inflates compile times even more.
+
+This is great for code clarity and power. We *want* the above. Instantiations also come with rising costs, which broadly fall into two classes:
+
+**Compilation / Executable costs**: For every function template instantiation, the compiler has to do an increasing amount of work. The frontend has to produce an instantiation, the the IR has to be optimized, and assembly emitted; along with it, exception tables and debug symbols. This costs compile time, link time, and space; it also has adverse effects on code cache-friendliness since we have many copies of the same code.
+
+There are compiler (and linker) optimizations that help with the space usage (see "COMDAT folding / icf"), but they cannot reduce the number of exported symbols, and they again cost compile time.
+
+**Code Clarity due to relaxed assumptions**: We cannot assume the base-class when only matching on qualifiers is desired.
+
+:::tonytable
+
+### We have to write this:
+```cpp
+template <std::derived_from<box> Box>
+decltype(auto) get(Box&& x) {
+  // Need to to qualify every access
+  // in case of shadowing
+  return std::forward<Box>(x).box::value;
+}
+```
+
+### When we would like to write this:
+```cpp
+template <std::derived_from<box> Box
+          /* but coerce to 
+             box[const?(&|&&)] */>
+decltype(auto) get(Box&& x) {
+  // we can assume x is a reference
+  // to a box, and not a derived
+  return std::forward<Box>(x).value;
+}
+```
+:::
+
+When writing templates that are really supposed to operate on a particular base-class type, one has to qualify every member access with the type's name, because derived classes can shadow those member functions and members.
+
+Use-Cases
+=========
+
+This paper proposes a mechanism to compute the final deduction of a function template parameter before template instantiation.
+
+Reduce the number of necessary template instantiations
+------------------------------------------------------
+
+This is largely the first example above. TODO write it out.
+
+
+Make code clearer by tightening preconditions
+---------------------------------------------
+
+Deducing to a base type is impossible to do with concepts. TODO flesh this out.
+
+:::tonytable
+
+### We have to write this:
+```cpp
+template <std::derived_from<box> Box>
+decltype(auto) get(Box&& x) {
+  // Need to to qualify every access
+  // in case of shadowing
+  return std::forward<Box>(x).box::value;
+}
+```
+
+### When we would like to write this:
+```cpp
+template <std::derived_from<box> Box
+          /* but coerce to 
+             box[const?(&|&&)] */>
+decltype(auto) get(Box&& x) {
+  // we can assume x is a reference
+  // to a box, and not a derived
+  return std::forward<Box>(x).value;
+}
+```
+:::
+
+Allow deduction to vocabulary type
+----------------------------------
+
+When putting together two libraries based on expression templates that both understand a small set of concrete vocabulary types at the boundary, computed deduction would solve the `operator auto()` problem.
+
+TODO flesh this out
+
+
+Allow deduction to appropriate type-erased wrapper
+--------------------------------------------------
+
+Say that we have a library with the interface of
+
+```cpp
+/* for buffer sizes of 8, 16, 32, 64, 128, 256, 512 */
+void register_callback(in_place_function<SmallBufferSize, void()> f);
+```
+
+Unfortunately, these are highly ambiguous when one considers something like `register_callback([&]{ notify(); });`.
+
+One would like to offer a frontend for this, to auto-select the overload:
+```cpp
+template <std::invocable<> F>
+void register_callback(F&& f) {
+  using function_t = in_place_function<SmallBufferSize_, void()>;
+  register_callback(function_t(std::forward<F>(f));
+}
+```
+
+but this generates a separate template instantiation for every F, leading to code bloat.
+
+It also *captures too much*! Because of the way we capture `F`, every other template in the overload set will be less specialized. We only wanted to select the buffer size - not hijack the entire overload set.
+
+What we need is something more along the lines of
+
+```cpp
+template <std::invocable<> F
+          /*deduce-to*/ in_place_function<std::ceil2(sizeof(F)), void()>>>
+void register_callback(F&& f) {
+  /* F is an in_place_function inside the body. */
+}
+```
+
+This allows us to compute the specialization without hijacking the entire overload set.
 
 
 Proposed Solution {#solution}
 =============================
 
-We are proposing a mechanism to allow a metafunction to compute the final deduction from the first-pass deduction that occurs in C++17.
+We propose a mechanism to allow a metafunction to compute the final deduction from the first-pass deduction that occurs in C++17.
+
+**The syntax is higly preliminary**, but the semantics do not have a whole lot of wiggle room.
 
 
 Example {#basic-example}
 ------------------------
 
 ```cpp
-template <typename Box : like_t<Box, box>>
+template <typename Box : std::copy_cvref_t<Box, box>>
 decltype(auto) get(Box&& x) {
-  return std::forward_like<Box>(x.value);
+  return std::forward<Box>(x).value;
 }
 ```
 
-- `like_t` copies (and overwrites) any cv-ref qualifiers on its second parameter with the ones on its first
-- There is no need to use `x.box::value` anymore, as `like_t<Box, box>` always results in a cv-qualified `box`
-- the `requires` clause is no longer necessary, since a reference to a `box` will always only bind to references to `box`es and their derived classes.
+- `copy_cvref_t` copies (and overwrites) any cv-ref qualifiers on its second parameter with the ones on its first
+- There is no need to use `x.box::value` anymore, as `copy_cvref_t<Box, box>` always results in a cv-qualified `box`
+- the `requires` clause is no longer (strictly) necessary, since a reference to a `box` will always only bind to to `box`es and their derived classes.
 
 
 Syntax {#syntax}
 ================
+From section 13.1 [temp.param]:
 
-
+> | _template-parameter_:
+> |       _type-parameter_
+> |       _parameter-declaration_
+> 
+> | _type-parameter_:
+> |       _type-parameter-key_`...`_~opt~_ _identifier~opt~_ [_deduction-expression~opt~_ `...`_~opt~_]{.add}
+> |       _type-parameter-key_ _identifier~opt~_ `=` _type-id_ [_deduction_expression_]{.add} 
+> |       _type-constraint_`...`_~opt~_ _identifier~opt~_ [_deduction-expression~opt~_ `...`_~opt~_]{.add}
+> |       _type-constraint_ _identifier~opt~_ `=` _type-id_ [_deduction_expression_]{.add}
+> |       _template-head_ _type-parameter-key_`...`_~opt~_ _identifier~opt~_
+> |       _template-head_ _type-parameter-key_ _identifier~opt~_ `=` _id-expression_
+> 
+> | _type-parameter-key_:
+> |       `class`
+> |       `typename`
+> :::add
+> | _deduction-expression_:
+> |       `:` id-expression
+> :::
 
 Proposed Semantics {#semantics}
 ===============================
@@ -106,6 +261,7 @@ The algorithm is exactly the same, but the the expression after the colon has to
 
 See values. Same rules - if it binds, it works, if it doesn't, SFINAE.
 
+### FAQ: Why should default template arguments execute before deduction exressions?
 
 Function signature construction {#sema-sig}
 -------------------------------------------

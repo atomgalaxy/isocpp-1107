@@ -1,2 +1,6 @@
-all:
-	bikeshed spec ./D1107.bs
+include wg21/Makefile
+
+.PHONY: all
+all: d1107.pdf
+
+
