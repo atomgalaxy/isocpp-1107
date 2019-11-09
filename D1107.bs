@@ -13,6 +13,8 @@ author:
   - name: Andrew Bennieston
     email: <a.j.bennieston@gmail.com>
   - name: Thomas Russel
+  - name: JeanHeyd Meneide
+    email: <phdoftheouse@gmail.com>
 ---
 
 Abstract
@@ -151,6 +153,83 @@ Allow deduction to vocabulary type
 When putting together two libraries based on expression templates that both understand a small set of concrete vocabulary types at the boundary, computed deduction would solve the `operator auto()` problem.
 
 TODO flesh this out
+
+
+Improve programmer control for template conversions
+---------------------------------------------------
+
+Many libraries use proxy types in conjunction with templated conversion operators as a means to provide a clean and usable top-level interface for working with systems that require serialization or complex mechanisms to access their data. Under the current rules, `template <typename Type> operator Type ();` deduces exactly what the user asks for on the left hand side. This is fine in 90% of cases, but falls down in the face of standards-endorsed library practices, e.g. with `std::tie(...)`:
+
+```cpp
+struct unicorn {
+  template <typename Type>
+  operator Type () {
+    /* ... */
+  }
+};
+
+struct foo {};
+
+int a;
+float b;
+foo c;
+
+unicorn uni = /* ... */;
+std::tie(a, b, c) = uni;
+```
+
+The template deduced by `Type` will always be `std::tuple<int&, float&, foo&>`. This is, unfortunately, wrong: the return type we need is `std::tuple<int, float, foo>`, which would allow us to assign into each element inside of the `std::tuple` to a corresponding value returned in the `std::tuple`.
+
+There is no way to fix this problem today. It is impossible to return values for any of the tuple's entries, especially since no amount of metaprogramming here will allow us to change the return type. This paper's proposed solution would allow this type of program to work, and restore a library developer's ability to meet user expectation.
+
+Additionally, templated conversions also fail to allow a library developer to explicitly handle references or values for a single type. Consider this `smarter_unicorn` class, which attempts to handle the difference between a reference and a value and perform different conversions like so:
+
+```
+struct smarter_unicorn {
+    template <typename Type>
+    operator Type () {
+        /* magic impl: can just 
+           return the value. */
+        return Type{};
+    }
+    
+    template <typename Type>
+    operator Type& () {
+        /* magic impl: need a long-lived 
+           reference to something. */
+        static std::decay_t<Type> v = std::decay_t<Type>{};
+        return v;
+    }
+};
+
+smarter_unicorn u = /* ... */;
+int retrieve_value = u;
+int& retrieve_reference = u;
+```
+
+While the code is silly (and compiles), this results in an unsolvable ambiguity:
+
+```
+error: conversion from 'smarter_unicorn' to 'int' is ambiguous
+     int retrieve_value = u;
+                        ^
+```
+
+If the developer removes one or the other conversion, they lose the ability to work with one or the other. For example, removing the `Type` conversion results in the following:
+
+```
+error: cannot bind non-const lvalue reference of 
+type 'int&' to an rvalue of type 'int'
+     int& retrieve_reference = u;
+                              ^
+```
+
+The only way to solve this problem is to use SFINAE to make a single type pick either one or the other conversion specifier. Unfortunately, this makes SFINAE rules apply, which means only one overload (one type conversion) may be used. This forces a developer to pick returning one of the value categories for a given type, and being completely unable to handle both cases.
+
+This is a problem that comes up [frequently in real world library code people use to ship both toy and mission-critical software](https://github.com/ThePhD/sol2/issues/629).
+
+
+**TODO: add how computed deduction easily fixes this problem.**
 
 
 Allow deduction to appropriate type-erased wrapper
